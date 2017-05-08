@@ -2,28 +2,28 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 # User-specific stuff:
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/dictionaries
+Lab01/.idea/**/workspace.xml
+Lab01/.idea/**/tasks.xml
+Lab01/.idea/dictionaries
 
 # Sensitive or high-churn files:
-.idea/**/dataSources/
-.idea/**/dataSources.ids
-.idea/**/dataSources.xml
-.idea/**/dataSources.local.xml
-.idea/**/sqlDataSources.xml
-.idea/**/dynamic.xml
-.idea/**/uiDesigner.xml
+Lab01/.idea/**/dataSources/
+Lab01/.idea/**/dataSources.ids
+Lab01/.idea/**/dataSources.xml
+Lab01/.idea/**/dataSources.local.xml
+Lab01/.idea/**/sqlDataSources.xml
+Lab01/.idea/**/dynamic.xml
+Lab01/.idea/**/uiDesigner.xml
 
 # Gradle:
-.idea/**/gradle.xml
-.idea/**/libraries
+Lab01/.idea/**/gradle.xml
+Lab01/.idea/**/libraries
 
 # CMake
 cmake-build-debug/
 
 # Mongo Explorer plugin:
-.idea/**/mongoSettings.xml
+Lab01/.idea/**/mongoSettings.xml
 
 ## File-based project format:
 *.iws
@@ -31,16 +31,16 @@ cmake-build-debug/
 ## Plugin-specific files:
 
 # IntelliJ
-/out/
+Lab01/out/
 
 # mpeltonen/sbt-idea plugin
-.idea_modules/
+Lab01/.idea_modules/
 
 # JIRA plugin
 atlassian-ide-plugin.xml
 
 # Cursive Clojure plugin
-.idea/replstate.xml
+Lab01/.idea/replstate.xml
 
 # Crashlytics plugin (for Android Studio and IntelliJ)
 com_crashlytics_export_strings.xml
