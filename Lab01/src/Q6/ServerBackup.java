@@ -1,4 +1,4 @@
-package Q7;
+package Q6;
 
 /*******************************************************
  * Cours :        LOG735-E17 Groupe 01
@@ -8,15 +8,12 @@ package Q7;
  *                Catherine Boivin BOIC19518909
  *******************************************************/
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Server {
+public class ServerBackup {
     private final static int SERVER_PORT = 10118;
     private final static int SERVER_PORT1 = 10119;
     private final static String SECOND_SERVER_HOSTNAME = "10.196.115.189";
@@ -25,11 +22,13 @@ public class Server {
 
         AtomicInteger atmInt = new AtomicInteger();
         ServerSocket server = new ServerSocket(SERVER_PORT);
-        Socket echoSocket;
+        ServerSocket serverNumber = new ServerSocket(SERVER_PORT1);
 
-        echoSocket = new Socket(SECOND_SERVER_HOSTNAME, SERVER_PORT1);
-        PrintWriter out;
-        out = new PrintWriter(echoSocket.getOutputStream(), true);
+        Socket clientServerSocket;
+        clientServerSocket = serverNumber.accept();
+        printfln("Connexion du serveur principal r\u00E9ussie.");
+        ServerCountThread serverCountThread = new ServerCountThread(clientServerSocket, atmInt);
+        serverCountThread.start();
 
         printfln("Le server est en marche et en attente de la connexion au port %d ...", SERVER_PORT);
 
@@ -42,7 +41,7 @@ public class Server {
             while ((clientSocket = server.accept()) != null) {
                 printfln("Connexion r\u00E9ussie.");
                 printfln("Attente de l'entr\u00e9e...");
-                ServerThread serverThread = new ServerThread(clientSocket, atmInt, out);
+                ServerThread serverThread = new ServerThread(clientSocket, atmInt);
                 serverThread.start();
             }
         } catch (Exception e) { System.out.println(e); }

@@ -9,21 +9,29 @@ package Q6;
  *******************************************************/
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server {
     private final static int SERVER_PORT = 10118;
+    private final static int SERVER_PORT1 = 10119;
+    private final static String SECOND_SERVER_HOSTNAME = "10.196.115.189";
 
     public static void main(String[] args) throws IOException {
 
         AtomicInteger atmInt = new AtomicInteger();
-        AtomicBoolean noClient = new AtomicBoolean(true);
         ServerSocket server = new ServerSocket(SERVER_PORT);
+        Socket echoSocket;
+
+        echoSocket = new Socket(SECOND_SERVER_HOSTNAME, SERVER_PORT1);
+        PrintWriter out;
+        out = new PrintWriter(echoSocket.getOutputStream(), true);
 
         printfln("Le server est en marche et en attente de la connexion au port %d ...", SERVER_PORT);
+
+        String inputLine;
 
         try {
 
@@ -32,7 +40,7 @@ public class Server {
             while ((clientSocket = server.accept()) != null) {
                 printfln("Connexion r\u00E9ussie.");
                 printfln("Attente de l'entr\u00e9e...");
-                ServerThread serverThread = new ServerThread(clientSocket, atmInt, noClient);
+                ServerThread serverThread = new ServerThread(clientSocket, atmInt, out);
                 serverThread.start();
             }
         } catch (Exception e) { System.out.println(e); }

@@ -20,7 +20,6 @@ public class Client {
     private final static String SECOND_SERVER_HOSTNAME = "10.196.115.189";
     private final static int SERVER_PORT = 10118;
     private static String currentMessage = "";
-    private static int nbServerRequest = 0;
 
     public static void main(String[] args) throws Exception {
         String serverHostname = DEFAULT_SERVER_HOSTNAME;
@@ -34,7 +33,7 @@ public class Client {
         }
         catch(TimeoutException|SocketException se ){
             printf(se.getMessage());
-            printfln(" Un probleme est survenue, connexion au serveur de backup.");
+            printfln("RIPPPPPPPPPPPP");
             connectToServer(secondServerHostname, currentMessage);
         }
     }
@@ -61,7 +60,7 @@ public class Client {
         BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
         String userInput;
         Boolean notResponding = true;
-
+        long beginTime = System.currentTimeMillis();
         if (message != "") {
             //printf("Entr\u00e9e: ");
             out.println(message);
@@ -70,16 +69,12 @@ public class Client {
                 printfln("Le serveur n'est plus connect\u00e9.");
             }
             printfln("echo: %s", serverResponse);
-            nbServerRequest = Integer.parseInt(serverResponse.split(" - ")[0].substring(1));
        }
         printf("Entr\u00e9e: ");
 
         while ((userInput = stdIn.readLine()) != null) {
-
-            out.println("#" + nbServerRequest + " - " + userInput);
-            currentMessage = "#" + nbServerRequest + " - " + userInput;
-
-            long beginTime = System.currentTimeMillis();
+            out.println(userInput);
+            currentMessage = userInput;
             while (((System.currentTimeMillis() - beginTime) < 10000)) {
                 if (in.ready()) {
                     notResponding = false;
@@ -87,7 +82,7 @@ public class Client {
                 }
             }
             if (notResponding) {
-                throw new TimeoutException("Le serveur ne repond plus.");
+                throw new TimeoutException("Le serveur ne repond plus rip :(");
             }
             String serverResponse = in.readLine();
             if (serverResponse == null) {
@@ -95,7 +90,6 @@ public class Client {
                 break;
             }
             printfln("echo: %s", serverResponse);
-            nbServerRequest = Integer.parseInt(serverResponse.split(" - ")[0].substring(1));
             printf("Entr\u00e9e: ");
         }
         out.close();
