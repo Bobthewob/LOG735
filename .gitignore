@@ -2,28 +2,28 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 # User-specific stuff:
-Lab01/.idea/**/workspace.xml
-Lab01/.idea/**/tasks.xml
-Lab01/.idea/dictionaries
+Lab02/.idea/**/workspace.xml
+Lab02/.idea/**/tasks.xml
+Lab02/.idea/dictionaries
 
 # Sensitive or high-churn files:
-Lab01/.idea/**/dataSources/
-Lab01/.idea/**/dataSources.ids
-Lab01/.idea/**/dataSources.xml
-Lab01/.idea/**/dataSources.local.xml
-Lab01/.idea/**/sqlDataSources.xml
-Lab01/.idea/**/dynamic.xml
-Lab01/.idea/**/uiDesigner.xml
+Lab02/.idea/**/dataSources/
+Lab02/.idea/**/dataSources.ids
+Lab02/.idea/**/dataSources.xml
+Lab02/.idea/**/dataSources.local.xml
+Lab02/.idea/**/sqlDataSources.xml
+Lab02/.idea/**/dynamic.xml
+Lab02/.idea/**/uiDesigner.xml
 
 # Gradle:
-Lab01/.idea/**/gradle.xml
-Lab01/.idea/**/libraries
+Lab02/.idea/**/gradle.xml
+Lab02/.idea/**/libraries
 
 # CMake
 cmake-build-debug/
 
 # Mongo Explorer plugin:
-Lab01/.idea/**/mongoSettings.xml
+Lab02/.idea/**/mongoSettings.xml
 
 ## File-based project format:
 *.iws
@@ -31,16 +31,16 @@ Lab01/.idea/**/mongoSettings.xml
 ## Plugin-specific files:
 
 # IntelliJ
-Lab01/out/
+Lab02/out/
 
 # mpeltonen/sbt-idea plugin
-Lab01/.idea_modules/
+Lab02/.idea_modules/
 
 # JIRA plugin
 atlassian-ide-plugin.xml
 
 # Cursive Clojure plugin
-Lab01/.idea/replstate.xml
+Lab02/.idea/replstate.xml
 
 # Crashlytics plugin (for Android Studio and IntelliJ)
 com_crashlytics_export_strings.xml
