@@ -1,23 +1,23 @@
 /******************************************************
 	Cours :           LOG730
-	Session :         Été 2010
+	Session :         ï¿½tï¿½ 2010
 	Groupe :          01
 	Projet :          Laboratoire #2
-	Date création :   2010-05-21
+	Date crï¿½ation :   2010-05-21
 ******************************************************
-Interface graphique des applications simulées. MainPartOne,
+Interface graphique des applications simulï¿½es. MainPartOne,
 MainPartTwo et MainPartThree instancient cette classe.
 
-L'interface offre les fonctionnalités suivantes :
--Envoyer à App Un/Deux/Trois : envoie l'événement associé
- de l'application source à l'application de destination.
--Envoyer à Tous : envoie l'événement associé
+L'interface offre les fonctionnalitï¿½s suivantes :
+-Envoyer ï¿½ App Un/Deux/Trois : envoie l'ï¿½vï¿½nement associï¿½
+ de l'application source ï¿½ l'application de destination.
+-Envoyer ï¿½ Tous : envoie l'ï¿½vï¿½nement associï¿½
  de l'application source aux deux autres applications.
--Envoi Synchronisé : envoie l'événement qui doit être
-synchronisé à toutes les applications.
+-Envoi Synchronisï¿½ : envoie l'ï¿½vï¿½nement qui doit ï¿½tre
+synchronisï¿½ ï¿½ toutes les applications.
 
-NOTE : Seules les classes internes implémentant ActionListener
-situées à la fin de la classe ont le potentiel de nécessiter 
+NOTE : Seules les classes internes implï¿½mentant ActionListener
+situï¿½es ï¿½ la fin de la classe ont le potentiel de nï¿½cessiter 
 des modifications.
 ******************************************************/ 
 package application;
@@ -38,19 +38,25 @@ public class UIMainWindow extends JFrame implements IObserver {
 
 	private static final long serialVersionUID = 17889303454552887L;
 	
-	private int delay; //Temps artificiel de délai de traitement des événements
-	private String syncText; //Texte à afficher lors de l'événement synchronisé
+	private int delay; //Temps artificiel de dï¿½lai de traitement des ï¿½vï¿½nements
+	private String syncText; //Texte ï¿½ afficher lors de l'ï¿½vï¿½nement synchronisï¿½
 	
 	private JList lstResultatEvent;
 	private DefaultListModel model;
 	private JScrollPane scrollPane;
+	private IEventBusConnector eventBus;
+	private String name;
 	
 	//Construit l'interface graphique.
-	//Ne devrait pas être modifié.
+	//Ne devrait pas ï¿½tre modifiï¿½.
 	public UIMainWindow(IEventBusConnector eventBusConn, String name, String syncText, int delay) {
 		super();
 		this.delay = delay;
 		this.syncText = syncText;
+
+		this.eventBus = eventBusConn;
+		this.name = name;
+
 		setSize(450,480);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setTitle(name);
@@ -67,11 +73,11 @@ public class UIMainWindow extends JFrame implements IObserver {
 		JButton sendSynchroToAll = new JButton();
 		
 		scrollPane.getViewport().setView(lstResultatEvent);
-		sendToPartOne.setText("Envoyer à App Un");
-		sendToPartTwo.setText("Envoyer à App Deux");
-		sendToPartThree.setText("Envoyer à App Trois");
-		sendToAll.setText("Envoyer à Tous");
-		sendSynchroToAll.setText("Envoie Synchronisé");
+		sendToPartOne.setText("Envoyer ï¿½ App Un");
+		sendToPartTwo.setText("Envoyer ï¿½ App Deux");
+		sendToPartThree.setText("Envoyer ï¿½ App Trois");
+		sendToAll.setText("Envoyer ï¿½ Tous");
+		sendSynchroToAll.setText("Envoie Synchronisï¿½");
 
 		sendToPartOne.addActionListener(new PartOneActionListener(name, eventBusConn));
 		sendToPartTwo.addActionListener(new PartTwoActionListener(name, eventBusConn));
@@ -79,7 +85,7 @@ public class UIMainWindow extends JFrame implements IObserver {
 		sendToAll.addActionListener(new AllActionListener(name, eventBusConn));
 		sendSynchroToAll.addActionListener(new AllSynchroActionListener(name, eventBusConn));
 		
-		// Une couleur exagérée pour être sûr que tu comprennes 
+		// Une couleur exagï¿½rï¿½e pour ï¿½tre sï¿½r que tu comprennes 
 		// que c'est le bouton important du laboratoire :)
 		sendSynchroToAll.setBackground(Color.CYAN);
 
@@ -99,14 +105,14 @@ public class UIMainWindow extends JFrame implements IObserver {
 	}
 	
 
-	//Affichage du message contenu dans les événements reçus
+	//Affichage du message contenu dans les ï¿½vï¿½nements reï¿½us
 	//par utilisation du patron Observer.
-	//Si l'événement est de type IEventSynchronized,
+	//Si l'ï¿½vï¿½nement est de type IEventSynchronized,
 	//affiche le texte contenu dans syncText.
 	
 	public void update(Object o, Object arg) {
 		
-		System.out.println("Réception de l'événement: " + arg.toString());
+		System.out.println("Rï¿½ception de l'ï¿½vï¿½nement: " + arg.toString());
 		IEvent event = (IEvent)arg;
 		try {
 			Thread.sleep(1000*delay);
@@ -115,11 +121,32 @@ public class UIMainWindow extends JFrame implements IObserver {
 			ie.printStackTrace();
 		}
 		
-		if(event instanceof IEventSynchronized) {
+		if(event instanceof IEventSynchronized){
 			model.addElement(syncText);
+			//model.addElement(event.getMessage());
+
+			if(event.getMessage().equals("App Un")){
+				eventBus.callEvent(new EventForPartOne("ACK " + name));
+			}else if(event.getMessage().equals("App Deux")){
+				eventBus.callEvent(new EventForPartTwo("ACK " + name));
+			}else if(event.getMessage().equals("App Trois")){
+				eventBus.callEvent(new EventForPartThree("ACK " + name));
+			}
 		}
 		else {
-			model.addElement(event.toString() + " - " + event.getMessage());
+
+			if(event.getMessage().indexOf("ACK") != -1) { // si on a un accuser de reception
+
+				//model.addElement(event.getMessage()); //afficher le ACK
+
+				if(event.getMessage().indexOf("Un") != -1){
+					eventBus.callEvent(new EventForPartTwoSync(name));
+				}else if(event.getMessage().indexOf("Deux") != -1){
+					eventBus.callEvent(new EventForPartThreeSync(name));
+				}
+			}else{
+				model.addElement(event.toString() + " - " + event.getMessage());
+			}
 		}
 	}
 }
@@ -179,7 +206,8 @@ class AllSynchroActionListener implements ActionListener {
 		this.eventBusConn = eventBusConn;
 		this.name = name;
 	}
-	public void actionPerformed(ActionEvent arg0) {
-		eventBusConn.callEvent(new EventThatShouldBeSynchronized(name));
+	public void actionPerformed(ActionEvent arg0) { //sync envoi
+		eventBusConn.callEvent(new EventForPartOneSync(name));
+		//eventBusConn.callEvent(new EventThatShouldBeSynchronized(name));
 	}
 }
