@@ -123,7 +123,6 @@ public class UIMainWindow extends JFrame implements IObserver {
 		
 		if(event instanceof IEventSynchronized){
 			model.addElement(syncText);
-			//model.addElement(event.getMessage());
 
 			if(event.getMessage().equals("App Un")){
 				eventBus.callEvent(new EventForPartOne("ACK " + name));
@@ -136,9 +135,6 @@ public class UIMainWindow extends JFrame implements IObserver {
 		else {
 
 			if(event.getMessage().indexOf("ACK") != -1) { // si on a un accuser de reception
-
-				//model.addElement(event.getMessage()); //afficher le ACK
-
 				if(event.getMessage().indexOf("Un") != -1){
 					eventBus.callEvent(new EventForPartTwoSync(name));
 				}else if(event.getMessage().indexOf("Deux") != -1){

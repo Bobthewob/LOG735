@@ -30,7 +30,6 @@ public class MainPartOne {
 
 		List<Class> listenedEvents = new ArrayList<Class>();
 		listenedEvents.add(IPartOneEvent.class);
-		//listenedEvents.add(IEventSynchronized.class);
 		EventBusConnector bus = new EventBusConnector(listenedEvents, ip, 12045);
 		UIMainWindow window = new UIMainWindow(bus, "App Un", "Vous", 3);
 		bus.addObserver(window);
