@@ -1,0 +1,6 @@
+systeme p2p
+
+connexion : sucursal dit a la banque jai 200 $
+la banque repond ok voici les autres sucursal connecter
+
+la banque connais le montant total du systeme

@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Succursale">
+    <output-path>$PROJECT_DIR$/out/artifacts/Succursale</output-path>
+    <root id="archive" name="Succursale.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/Succursale/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="Lab03" />
+    </root>
+  </artifact>
+</component>
