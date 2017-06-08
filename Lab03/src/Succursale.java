@@ -30,27 +30,38 @@ public class Succursale implements Serializable,ISuccursale {
         this.adresseIP = adresseIP;
     }
 
-    public void transfererMontant(int montant, int idSource) throws RemoteException {
+    public void transfererMontant(int montant, int idDest) throws RemoteException {
 
-        try {
-            if(this.montant - montant < 0){
-                throw  new Exception("Nous ne pouvons faire le transfert car le montant de cette succursale ne peut etre negatif.");
+        int idSource = this.id;
+
+        new Thread() {
+            public void run() {
+                try {
+
+                    Registry registry = LocateRegistry.getRegistry(10000);
+                    ISuccursale sSource = (ISuccursale) registry.lookup("Succursale" + idSource);
+
+                    if (sSource.obtenirMontant() - montant < 0) {
+                        throw new Exception("Nous ne pouvons faire le transfert car le montant de cette succursale ne peut etre negatif.");
+                    }
+                    sSource.diminuerMontant(montant);
+                    //this.montant -= montant;
+
+                    Thread.sleep(5000);
+
+                    //Registry registry = LocateRegistry.getRegistry(10000);
+                    ISuccursale s = (ISuccursale) registry.lookup("Succursale" + idDest);
+
+                    s.ajoutMontant(montant);
+
+                    IBanque b = (IBanque) registry.lookup("Banque");
+                    b.miseAJourSuccursales();
+
+                } catch (Exception e) {
+                    e.toString();
+                }
             }
-            this.montant -= montant;
-
-            Thread.sleep(5000);
-
-            Registry registry = LocateRegistry.getRegistry(10000);
-            ISuccursale s = (ISuccursale) registry.lookup("Succursale" + idSource);
-
-            s.ajoutMontant(montant);
-
-            IBanque b = (IBanque) registry.lookup("Banque");
-            b.miseAJourSuccursales();
-
-        }catch (Exception e){
-            e.toString();
-        }
+        }.start();
     }
 
     public void ajoutMontant(int montant) throws  RemoteException{
@@ -112,6 +123,9 @@ public class Succursale implements Serializable,ISuccursale {
 
             ISuccursale skeleton = (ISuccursale) UnicastRemoteObject.exportObject(s, 10000 + s.id); // Génère un stub vers notre service.
             registry.bind("Succursale" + Integer.toString(s.id), skeleton);
+
+            TransfertFils transfertFils = new TransfertFils(s.id);
+            transfertFils.start();
 
             b.miseAJourSuccursales();
 
