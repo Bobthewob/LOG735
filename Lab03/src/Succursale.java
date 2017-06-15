@@ -1,15 +1,18 @@
 import java.io.Serializable;
-import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static java.lang.System.exit;
 
 /**
  * Created by Joey Roger on 2017-06-06.
  */
-public class Succursale implements Serializable,ISuccursale {
+public class Succursale extends UnicastRemoteObject implements Serializable,ISuccursale {
 
     public static final String ANSI_RED_BACKGROUND = "\u001B[41m";
     public static final String ANSI_GREEN_BACKGROUND = "\u001B[42m";
@@ -20,43 +23,34 @@ public class Succursale implements Serializable,ISuccursale {
     public static final String ANSI_WHITE_BACKGROUND = "\u001B[47m";
 
     private int id;
-    private int montant;
+    private AtomicInteger montant = new AtomicInteger();
     private String adresseIP;
-    //public ArrayList<Integer> listeSuccursale = new ArrayList<Integer>();
+    public HashMap<Integer,ISuccursale> listeSuccursale = new HashMap<Integer,ISuccursale>();
 
-    public Succursale(int montant, int id,String adresseIP){
-        this.montant = montant;
-        this.id = id;
+    public Succursale(int montant,String adresseIP) throws RemoteException{
+        super(0);
+        this.montant.set(montant);
         this.adresseIP = adresseIP;
     }
 
     public void transfererMontant(int montant, int idDest) throws RemoteException {
-
-        int idSource = this.id;
-
         new Thread() {
             public void run() {
                 try {
 
-                    Registry registry = LocateRegistry.getRegistry(10000);
-                    ISuccursale sSource = (ISuccursale) registry.lookup("Succursale" + idSource);
-
-                    if (sSource.obtenirMontant() - montant < 0) {
+                    if (obtenirMontant() - montant < 0) {
                         throw new Exception("Nous ne pouvons faire le transfert car le montant de cette succursale ne peut etre negatif.");
                     }
-                    sSource.diminuerMontant(montant);
-                    //this.montant -= montant;
+
+                    diminuerMontant(montant);
 
                     Thread.sleep(5000);
 
-                    //Registry registry = LocateRegistry.getRegistry(10000);
-                    ISuccursale s = (ISuccursale) registry.lookup("Succursale" + idDest);
+                    ISuccursale s = listeSuccursale.get(idDest);
 
                     s.ajoutMontant(montant);
 
-                    IBanque b = (IBanque) registry.lookup("Banque");
-                    b.miseAJourSuccursales();
-
+                    afficherSuccursales();
                 } catch (Exception e) {
                     e.toString();
                 }
@@ -65,29 +59,23 @@ public class Succursale implements Serializable,ISuccursale {
     }
 
     public void ajoutMontant(int montant) throws  RemoteException{
-        this.montant += montant;
-    }
-
-    public void mettreAJourSuccursale() throws RemoteException{
-        try {
-            afficherSuccursales();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
+        this.montant.addAndGet(montant);
+        this.afficherSuccursales();
     }
 
     public int obtenirMontant() throws RemoteException{
-        return montant;
+        return montant.get();
     }
 
     public int obtenirId() throws RemoteException{
         return id;
     }
 
-    private void afficherSuccursales() throws Exception{
+    public void assignerId(int id) throws RemoteException{
+        this.id = id;
+    }
 
-        //System.out.print("\033[H\033[2J");
-        //System.out.flush();
+    public void afficherSuccursales() throws RemoteException{
         System.out.println();
         System.out.println(ANSI_RED_BACKGROUND + "Ceci est la succursale numero " + Integer.toString(this.obtenirId()) + " et elle contient un montant de "
         + Integer.toString(this.obtenirMontant()) + " dollar(s).");
@@ -95,39 +83,43 @@ public class Succursale implements Serializable,ISuccursale {
         System.out.println("Succursale(s) de la banque :");
         System.out.println();
 
-        Registry registry = LocateRegistry.getRegistry(adresseIP ,10000);
-        String[] services = registry.list();
-
-        for (String succ:services) {
-            if(succ.indexOf("Succursale") != -1) {
-                ISuccursale s = (ISuccursale) registry.lookup(succ);
-                System.out.println(Integer.toString(s.obtenirId()) + ", montant : " + Integer.toString(s.obtenirMontant())+ " dollar(s).");
-            }
+        for (Map.Entry<Integer, ISuccursale> succ: this.listeSuccursale.entrySet()) {
+            ISuccursale s = succ.getValue();
+            System.out.println(Integer.toString(s.obtenirId()) + ", montant : " + Integer.toString(s.obtenirMontant())+ " dollar(s).");
         }
 
         System.out.println();
-        //System.out.print(ANSI_GREEN_BACKGROUND+"faire un transfert (montant id_succursale_destination) : ");
     }
 
     public static void main(String[] args) {
         try {
 
             Integer argent = Integer.parseInt(args[0]);
+
+            if (argent < 0) {
+                exit(0);
+            }
+
             String adresseIP = args[1];
 
             Registry registry = LocateRegistry.getRegistry(adresseIP,10000 );
             IBanque b = (IBanque) registry.lookup("Banque");
 
-            Integer id = b.connexion(argent);
-            Succursale s = new Succursale(argent, id, adresseIP);
 
-            ISuccursale skeleton = (ISuccursale) UnicastRemoteObject.exportObject(s, 10000 + s.id); // Génère un stub vers notre service.
-            registry.bind("Succursale" + Integer.toString(s.id), skeleton);
+            Succursale s = new Succursale(argent, adresseIP);
 
-            TransfertFils transfertFils = new TransfertFils(s.id);
+            s.listeSuccursale = b.connexion(s);
+
+            for (Map.Entry<Integer, ISuccursale> succ: s.listeSuccursale.entrySet()) {
+                if(succ.getKey() != s.id){
+                    succ.getValue().pingSuccursale(s.listeSuccursale.get(s.id));
+                }
+            }
+
+            s.afficherSuccursales();
+
+            TransfertFils transfertFils = new TransfertFils(s.listeSuccursale,  s.id);
             transfertFils.start();
-
-            b.miseAJourSuccursales();
 
             while(true){
                 String input = System.console().readLine();
@@ -135,31 +127,14 @@ public class Succursale implements Serializable,ISuccursale {
                 switch (input.split(" ")[0]){
                     case "Transfert":
                         try {
+                            ISuccursale destSucc = s.listeSuccursale.get(Integer.parseInt(input.split(" ")[2]));
 
-                            String[] array = registry.list();
-                            boolean succExist = false;
-
-                            for (String succ:array) {
-                                if(succ.indexOf("Succursale") != -1) {
-                                    if(Integer.parseInt(succ.substring(10)) == Integer.parseInt(input.split(" ")[2])){
-                                        succExist = true;
-                                        break;
-                                    }
-                                }
+                            if(destSucc == null){
+                                System.out.println("La succursale visee par le transfert n'est pas valide");
                             }
-
-                            if(!succExist){
-                                throw  new Exception("La succursale destination nest pas valide.");
+                            else {
+                                s.transfererMontant(Integer.parseInt(input.split(" ")[1]), Integer.parseInt(input.split(" ")[2]));
                             }
-
-                            ISuccursale s1 = (ISuccursale) registry.lookup("Succursale" + id);
-                            int montantSucc = s1.obtenirMontant();
-
-                            if(Integer.parseInt(input.split(" ")[1]) > montantSucc){
-                                throw  new Exception("Le montant dois etre positif.");
-                            }
-
-                            s1.transfererMontant(Integer.parseInt(input.split(" ")[1]), Integer.parseInt(input.split(" ")[2]));
 
                         }catch (Exception e){
                             System.out.println(e.toString());
@@ -167,8 +142,15 @@ public class Succursale implements Serializable,ISuccursale {
                         break;
                     case "Erreur":
                         try {
-                            ISuccursale s1 = (ISuccursale) registry.lookup("Succursale" + id);
-                            s1.diminuerMontant(Integer.parseInt(input.split(" ")[1]));
+                            s.diminuerMontant(Integer.parseInt(input.split(" ")[1]));
+                            s.afficherSuccursales();
+                        }catch (Exception e){
+                            System.out.println(e.toString());
+                        }
+                        break;
+                    case "AfficherSuccursale":
+                        try {
+                            s.afficherSuccursales();
                         }catch (Exception e){
                             System.out.println(e.toString());
                         }
@@ -182,20 +164,29 @@ public class Succursale implements Serializable,ISuccursale {
         }
     }
 
-
     public void diminuerMontant(int montant) throws  RemoteException{
         try {
-            if (this.montant - montant < 0) {
+            if (this.montant.get() - montant < 0) {
                 throw new Exception("Nous ne pouvons faire le transfert car le montant de cette succursale ne peut etre negatif.");
             }
 
-            this.montant -= montant;
+            this.montant.addAndGet(-montant);
 
-            Registry registry = LocateRegistry.getRegistry(adresseIP,10000 );
-            IBanque b = (IBanque) registry.lookup("Banque");
-            b.miseAJourSuccursales();
         }catch (Exception e){
             System.out.println(e.toString());
+        }
+    }
+
+    public void pingSuccursale(ISuccursale sourceSucc) throws  RemoteException
+    {
+        System.out.println("succ source : " + Integer.toString(sourceSucc.obtenirId()));
+        System.out.println("this succ : " + Integer.toString(this.id));
+
+       listeSuccursale.put(sourceSucc.obtenirId(), sourceSucc);
+        try{
+            listeSuccursale.get(this.id).afficherSuccursales();
+        }catch(Exception e){
+            e.printStackTrace();
         }
     }
 }

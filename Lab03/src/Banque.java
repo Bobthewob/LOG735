@@ -5,47 +5,38 @@ import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Banque implements IBanque {
 
-    private ArrayList<Integer> listeSuccursale = new ArrayList<Integer>();
-    private int idCompteur = 0;
-    private int montantTotal = 0;
+    public HashMap<Integer,ISuccursale> listeSuccursale = new HashMap<Integer,ISuccursale>();
+    private AtomicInteger idCompteur = new AtomicInteger();
+    private AtomicInteger montantTotal = new AtomicInteger();
 
-    public Banque() {}
-
-    public Integer connexion(int montant) throws Exception{
-        montantTotal += montant;
-
-        ++idCompteur;
-
-        System.out.println("Ajout d'une succursale, montant total est de " + montantTotal);
-
-        return idCompteur;
+    public Banque() {
+        idCompteur.set(0);
+        montantTotal.set(0);
     }
 
-    public void miseAJourSuccursales() throws Exception{
+    public HashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception{
+        montantTotal.addAndGet(nouvelleSuccursale.obtenirMontant());
 
-        Registry registry = LocateRegistry.getRegistry("127.0.0.1" ,10000);
-        String[] services = registry.list();
+        System.out.println("Ajout d'une succursale ayant le montant "+ nouvelleSuccursale.obtenirMontant() +", montant total est de " + montantTotal);
 
-        for (String succ:services) {
-            if(succ.indexOf("Succursale") != -1)
-            {
-                ISuccursale s = (ISuccursale) registry.lookup(succ);
-                s.mettreAJourSuccursale();
-            }
-        }
+        nouvelleSuccursale.assignerId(idCompteur.incrementAndGet());
+        listeSuccursale.put(nouvelleSuccursale.obtenirId(), nouvelleSuccursale);
+
+        return listeSuccursale;
     }
 
     public int obtenirMontantTotal() throws RemoteException{
-        return montantTotal;
+        return montantTotal.get();
     }
 
     public static void main(String[] args) {
         try {
-            System.out.println("Demarrrage de la banque.");
+            System.out.println("Demarrage de la banque.");
             Banque b = new Banque();
 
             Registry registry = LocateRegistry.createRegistry(10000);

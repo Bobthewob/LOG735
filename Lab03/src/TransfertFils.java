@@ -1,17 +1,20 @@
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 
 /**
  * Created by Joey Roger on 2017-06-08.
  */
 public class TransfertFils extends Thread {
-    private int id;
+    private HashMap<Integer,ISuccursale> listeSuccursale;
+    private int idSource;
     private final Random seed = new Random();
 
-    public TransfertFils(int id){
-        this.id = id;
+    public TransfertFils(HashMap<Integer,ISuccursale> listeSuccursale, int idSource){
+        this.listeSuccursale = listeSuccursale;
+        this.idSource = idSource;
     }
 
     public void run(){
@@ -21,39 +24,32 @@ public class TransfertFils extends Thread {
 
                 int waitTime = (seed.nextInt(6) + 5) * 1000;
 
-                //System.out.println("Attente de " + Integer.toString(waitTime / 1000) + " secondes avant transfert automatique.");
-                //System.out.flush();
-
                 long startTime = System.currentTimeMillis();
 
                 while (System.currentTimeMillis() < (startTime + waitTime)){
                     Thread.sleep(100);
                 }
 
-                Registry registry = LocateRegistry.getRegistry(10000);
-                String[] Stubs = registry.list();
-                ArrayList<String> validDestinationStub = new ArrayList<String>();
-
-                for (String stub:Stubs) {
-                    if((stub.indexOf("Succursale") != -1) && (id !=  Integer.parseInt(stub.substring(10)))){
-                        validDestinationStub.add(stub);
-                    }
-                }
-
-                if(validDestinationStub.size() == 0){
+                if(this.listeSuccursale.size() == 1){
                     System.out.println("Aucune succursale valide pour le transfert.");
                     System.out.flush();
-                }else{
-                    String destinationStub = validDestinationStub.get(seed.nextInt(validDestinationStub.size()));
+                }
+                else {
+                    ISuccursale succDest;
+                    Object[] tableauSucc = this.listeSuccursale.values().toArray();
 
-                    ISuccursale s = (ISuccursale) registry.lookup("Succursale" + id);
-                    int montantSucc = s.obtenirMontant();
-                    int montantTransfert = (int) Math.ceil ((1 / (seed.nextInt(11) + 0.0000001)) * montantSucc);
-                    int succDestId = Integer.parseInt(destinationStub.substring(10));
+                    do {
+                        succDest = (ISuccursale) tableauSucc[seed.nextInt(tableauSucc.length)];
+                    } while (succDest.obtenirId() == this.idSource);
 
-                    System.out.println("Transfert de " + montantSucc + "dollars a la succursale " + succDestId);
+                    ISuccursale succSource = this.listeSuccursale.get(this.idSource);
+                    int montantSucc = succSource.obtenirMontant();
 
-                    s.transfererMontant(montantTransfert, succDestId);
+                    int montantTransfert = (int) Math.ceil(montantSucc / (seed.nextInt(10) + 1));
+
+                    System.out.println("Transfert automatique de " + Integer.toString(montantTransfert) + " dollars a la succursale " + succDest.obtenirId());
+
+                    succSource.transfererMontant(montantTransfert, succDest.obtenirId());
                 }
             }
         }catch (Exception e){
