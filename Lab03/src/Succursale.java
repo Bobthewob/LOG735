@@ -1,3 +1,10 @@
+/*******************************************************
+ * Cours :        LOG735-E17 Groupe 01
+ * Projet :       Laboratoire #3
+ * Etudiants :    Philippe Rhéaume RHEP11089407
+ *                Joey Roger ROGJ13039302
+ *                Catherine Boivin BOIC19518909
+ *******************************************************/
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -6,12 +13,8 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import static java.lang.System.exit;
 
-/**
- * Created by Joey Roger on 2017-06-06.
- */
 public class Succursale extends UnicastRemoteObject implements Serializable,ISuccursale {
 
     public static final String ANSI_RED_BACKGROUND = "\u001B[41m";
@@ -25,6 +28,7 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
     private int id;
     private AtomicInteger montant = new AtomicInteger();
     private String adresseIP;
+    private boolean print = true;
     public HashMap<Integer,ISuccursale> listeSuccursale = new HashMap<Integer,ISuccursale>();
 
     public Succursale(int montant,String adresseIP) throws RemoteException{
@@ -42,9 +46,11 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
                         throw new Exception("Nous ne pouvons faire le transfert car le montant de cette succursale ne peut etre negatif.");
                     }
 
-                    System.out.println();
-                    System.out.println(ANSI_RED_BACKGROUND + "--> " + Integer.toString(montant) + " : " + Integer.toString(idDest));
-                    System.out.println();
+                    if (print) {
+                        System.out.println();
+                        System.out.println(ANSI_RED_BACKGROUND + "--> " + Integer.toString(montant) + " : " + Integer.toString(idDest));
+                        System.out.println();
+                    }
 
                     diminuerMontant(montant);
 
@@ -64,9 +70,11 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
     public void ajoutMontant(int montant, int idSource) throws  RemoteException{
         this.montant.addAndGet(montant);
 
-        System.out.println();
-        System.out.println(ANSI_RED_BACKGROUND + "<-- " + Integer.toString(montant) + " : " + Integer.toString(idSource));
-        System.out.println();
+        if (print) {
+            System.out.println();
+            System.out.println(ANSI_RED_BACKGROUND + "<-- " + Integer.toString(montant) + " : " + Integer.toString(idSource));
+            System.out.println();
+        }
     }
 
     public int obtenirMontant() throws RemoteException{
@@ -164,6 +172,13 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
                     case "AfficherSuccursale":
                         try {
                             s.afficherSuccursale();
+                        }catch (Exception e){
+                            System.out.println(e.toString());
+                        }
+                        break;
+                    case "p":
+                        try {
+                            s.print = !s.print;
                         }catch (Exception e){
                             System.out.println(e.toString());
                         }

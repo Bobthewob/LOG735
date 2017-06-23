@@ -1,12 +1,13 @@
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.util.ArrayList;
+/*******************************************************
+ * Cours :        LOG735-E17 Groupe 01
+ * Projet :       Laboratoire #3
+ * Etudiants :    Philippe Rhéaume RHEP11089407
+ *                Joey Roger ROGJ13039302
+ *                Catherine Boivin BOIC19518909
+ *******************************************************/
 import java.util.HashMap;
 import java.util.Random;
 
-/**
- * Created by Joey Roger on 2017-06-08.
- */
 public class TransfertFils extends Thread {
     private HashMap<Integer,ISuccursale> listeSuccursale;
     private int idSource;
@@ -46,8 +47,6 @@ public class TransfertFils extends Thread {
                     int montantSucc = succSource.obtenirMontant();
 
                     int montantTransfert = (int) Math.ceil(montantSucc / (seed.nextInt(10) + 1));
-
-                    //System.out.println("Transfert automatique de " + Integer.toString(montantTransfert) + " dollars a la succursale " + succDest.obtenirId());
 
                     succSource.transfererMontant(montantTransfert, succDest.obtenirId());
                 }
