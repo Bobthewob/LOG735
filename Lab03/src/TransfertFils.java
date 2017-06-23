@@ -47,7 +47,7 @@ public class TransfertFils extends Thread {
 
                     int montantTransfert = (int) Math.ceil(montantSucc / (seed.nextInt(10) + 1));
 
-                    System.out.println("Transfert automatique de " + Integer.toString(montantTransfert) + " dollars a la succursale " + succDest.obtenirId());
+                    //System.out.println("Transfert automatique de " + Integer.toString(montantTransfert) + " dollars a la succursale " + succDest.obtenirId());
 
                     succSource.transfererMontant(montantTransfert, succDest.obtenirId());
                 }

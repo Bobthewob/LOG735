@@ -42,15 +42,18 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
                         throw new Exception("Nous ne pouvons faire le transfert car le montant de cette succursale ne peut etre negatif.");
                     }
 
+                    System.out.println();
+                    System.out.println(ANSI_RED_BACKGROUND + "--> " + Integer.toString(montant) + " : " + Integer.toString(idDest));
+                    System.out.println();
+
                     diminuerMontant(montant);
 
                     Thread.sleep(5000);
 
                     ISuccursale s = listeSuccursale.get(idDest);
 
-                    s.ajoutMontant(montant);
+                    s.ajoutMontant(montant, obtenirId());
 
-                    afficherSuccursales();
                 } catch (Exception e) {
                     e.toString();
                 }
@@ -58,9 +61,12 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
         }.start();
     }
 
-    public void ajoutMontant(int montant) throws  RemoteException{
+    public void ajoutMontant(int montant, int idSource) throws  RemoteException{
         this.montant.addAndGet(montant);
-        this.afficherSuccursales();
+
+        System.out.println();
+        System.out.println(ANSI_RED_BACKGROUND + "<-- " + Integer.toString(montant) + " : " + Integer.toString(idSource));
+        System.out.println();
     }
 
     public int obtenirMontant() throws RemoteException{
@@ -73,6 +79,13 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
 
     public void assignerId(int id) throws RemoteException{
         this.id = id;
+    }
+
+    private void afficherSuccursale() throws  RemoteException{
+        System.out.println();
+        System.out.println(ANSI_RED_BACKGROUND + "Succursale numero " + Integer.toString(this.obtenirId()) + " et elle contenant "
+                + Integer.toString(this.obtenirMontant()) + " dollar(s).");
+        System.out.println();
     }
 
     public void afficherSuccursales() throws RemoteException{
@@ -150,7 +163,7 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
                         break;
                     case "AfficherSuccursale":
                         try {
-                            s.afficherSuccursales();
+                            s.afficherSuccursale();
                         }catch (Exception e){
                             System.out.println(e.toString());
                         }
@@ -171,7 +184,6 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
             }
 
             this.montant.addAndGet(-montant);
-
         }catch (Exception e){
             System.out.println(e.toString());
         }

@@ -10,7 +10,7 @@ public interface ISuccursale extends Remote {
     void assignerId(int id) throws  RemoteException;
     int obtenirMontant() throws  RemoteException;
     void transfererMontant(int montant,int idSource) throws RemoteException;
-    void ajoutMontant(int montant) throws  RemoteException;
+    void ajoutMontant(int montant, int idSource) throws  RemoteException;
     void diminuerMontant(int montant) throws  RemoteException;
     void afficherSuccursales() throws RemoteException;
     void pingSuccursale(ISuccursale sourceSucc) throws  RemoteException;
