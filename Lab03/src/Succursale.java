@@ -58,7 +58,7 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
 
                     ISuccursale s = listeSuccursale.get(idDest);
 
-                    s.ajoutMontant(montant, obtenirId());
+                    s.ajouterMontant(montant, obtenirId());
 
                 } catch (Exception e) {
                     e.toString();
@@ -67,7 +67,7 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
         }.start();
     }
 
-    public void ajoutMontant(int montant, int idSource) throws  RemoteException{
+    public void ajouterMontant(int montant, int idSource) throws  RemoteException{
         this.montant.addAndGet(montant);
 
         if (print) {
