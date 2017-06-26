@@ -17,4 +17,6 @@ public interface ISuccursale extends Remote {
     void ajouterMontant(int montant, int idSource) throws  RemoteException;
     void afficherSuccursales() throws RemoteException;
     void pingSuccursale(ISuccursale sourceSucc) throws  RemoteException;
+    void ajouterEtatLocal(EtatLocal etatLocal) throws  RemoteException;
+    void recevoirMarqueur(int idEtatLocal, int idSuccRacine) throws  RemoteException;
 }

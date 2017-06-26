@@ -10,6 +10,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,6 +31,8 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
     private String adresseIP;
     private boolean print = true;
     public HashMap<Integer,ISuccursale> listeSuccursale = new HashMap<Integer,ISuccursale>();
+    private ArrayList<EtatLocal> etatsLocaux = new ArrayList<EtatLocal>();
+    private HashMap<Integer,EtatGlobal> listeGlobale = new HashMap<Integer,EtatGlobal>();
 
     public Succursale(int montant,String adresseIP) throws RemoteException{
         super(0);
@@ -69,6 +72,8 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
 
     public void ajouterMontant(int montant, int idSource) throws  RemoteException{
         this.montant.addAndGet(montant);
+
+        enregistrerModification(idSource, montant);
 
         if (print) {
             System.out.println();
@@ -183,6 +188,14 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
                             System.out.println(e.toString());
                         }
                         break;
+                    case "EG":
+                        try {
+                            System.out.println("EG IN");
+                            s.demarrerEtatGlobal();
+                        }catch (Exception e){
+                            System.out.println(e.toString());
+                        }
+                        break;
                 }
 
 
@@ -199,12 +212,111 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
             }
 
             this.montant.addAndGet(-montant);
+
         }catch (Exception e){
             System.out.println(e.toString());
         }
     }
 
-    public void pingSuccursale(ISuccursale sourceSucc) throws  RemoteException
+    public void demarrerEtatGlobal() throws  RemoteException{
+        try {
+            Registry registry = LocateRegistry.getRegistry(adresseIP, 10000);
+            IBanque b = (IBanque) registry.lookup("Banque");
+
+            int idEtatGlobal = b.obtenirIdEtat();
+            listeGlobale.put(idEtatGlobal, new EtatGlobal(b.obtenirMontantTotal()));
+
+            EtatLocal etatLocal = new EtatLocal(idEtatGlobal, obtenirId(), obtenirMontant(), listeSuccursale.size() - 1);
+            etatsLocaux.add(etatLocal);
+
+            System.out.println("New etat IN");
+
+            Thread.sleep(5000); // on simule la meme attente que le transfert d'argent
+
+            for (Map.Entry<Integer, ISuccursale> succ : listeSuccursale.entrySet()) {
+                if (succ.getKey() != obtenirId()) {
+                    new Thread() {
+                        public void run() {
+                            try {
+                                succ.getValue().recevoirMarqueur(idEtatGlobal, obtenirId());        //on envoit le marqueur a tous les succursale sauf nous.
+                            } catch (Exception e) {
+                                e.toString();
+                            }
+                        }
+                    }.start();
+                }
+            }
+        }catch (Exception e){
+            e.toString();
+        }
+    }
+
+    public void recevoirMarqueur(int idEtatLocal, int idSuccRacine){
+
+        try {
+
+            System.out.println("Recoit Marqueur IN");
+
+            boolean etatLocalExisteDeja = false;
+
+            for (EtatLocal etatLocal : etatsLocaux) {
+                if (etatLocal.obtenirIdEtatGlobal() == idEtatLocal) {
+                    etatLocalExisteDeja = true;
+                    etatLocal.incrementerEnregistrementTermine();
+
+                    if(etatLocal.obtenirEnregistrementTermine()) // nous avons terminer notre etat local
+                        listeSuccursale.get(etatLocal.obtenirSuccursaleRacine()).ajouterEtatLocal(etatLocal);
+                }
+            }
+
+            if (!etatLocalExisteDeja) { // premier marqueur recu
+                EtatLocal etatLocalCourant = new EtatLocal(idEtatLocal, obtenirId(), obtenirMontant(), listeSuccursale.size() - 2, idSuccRacine); //on enregistre notre etat
+                etatsLocaux.add(etatLocalCourant);
+
+                if(etatLocalCourant.obtenirEnregistrementTermine()) // nous avons terminer notre etat local
+                    listeSuccursale.get(etatLocalCourant.obtenirSuccursaleRacine()).ajouterEtatLocal(etatLocalCourant);
+
+                //on broadcast au autres succursales
+
+                Thread.sleep(5000); // on simule la meme attente que le transfert d'argent
+
+                for (Map.Entry<Integer, ISuccursale> succ: listeSuccursale.entrySet()) {
+                    if(succ.getKey() != obtenirId()){
+                        new Thread() {
+                            public void run() {
+                                try {
+                                    succ.getValue().recevoirMarqueur(idEtatLocal, obtenirId());        //on envoit le marqueur a tous les succursale sauf nous.
+                                } catch (Exception e) {
+                                    e.toString();
+                                }
+                            }
+                        }.start();
+                    }
+                }
+            }
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public void enregistrerModification(int succSource, int montant){
+        for (EtatLocal etatLocal:etatsLocaux) {
+            if ((!etatLocal.obtenirEnregistrementTermine()) && (succSource != etatLocal.obtenirSuccursaleRacine())) { // si on enregistre encore les modification
+                etatLocal.enregistrerCanal(succSource, montant);
+            }
+        }
+    }
+
+    public void ajouterEtatLocal(EtatLocal etatLocal){
+        listeGlobale.get(etatLocal.obtenirIdEtatGlobal()).etatLocauxlocasse.add(etatLocal);
+
+        if(listeGlobale.get(etatLocal.obtenirIdEtatGlobal()).etatLocauxlocasse.size() == listeSuccursale.size()) { //on a recu tous les marqueurs
+            System.out.print(listeGlobale.get(etatLocal.obtenirIdEtatGlobal()).toString());
+        }
+    }
+
+    public void pingSuccursale(ISuccursale sourceSucc) throws RemoteException
     {
         System.out.println("succ source : " + Integer.toString(sourceSucc.obtenirId()));
         System.out.println("this succ : " + Integer.toString(this.id));

@@ -17,10 +17,12 @@ public class Banque implements IBanque {
     public HashMap<Integer,ISuccursale> listeSuccursale = new HashMap<Integer,ISuccursale>();
     private AtomicInteger idCompteur = new AtomicInteger();
     private AtomicInteger montantTotal = new AtomicInteger();
+    private AtomicInteger idEtat = new AtomicInteger();
 
     public Banque() {
         idCompteur.set(0);
         montantTotal.set(0);
+        idEtat.set(0);
     }
 
     public HashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception{
@@ -36,6 +38,10 @@ public class Banque implements IBanque {
 
     public int obtenirMontantTotal() throws RemoteException{
         return montantTotal.get();
+    }
+
+    public int obtenirIdEtat() throws RemoteException{
+        return idEtat.getAndIncrement();
     }
 
     public static void main(String[] args) {

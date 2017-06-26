@@ -13,4 +13,5 @@ import java.util.HashMap;
 public interface IBanque extends Remote {
     HashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception;
     int obtenirMontantTotal() throws RemoteException;
+    int obtenirIdEtat() throws RemoteException;
 }
