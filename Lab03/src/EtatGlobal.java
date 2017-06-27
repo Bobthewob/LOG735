@@ -1,41 +1,46 @@
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
+/*******************************************************
+ * Cours :        LOG735-E17 Groupe 01
+ * Projet :       Laboratoire #3
+ * Etudiants :    Philippe Rhéaume RHEP11089407
+ *                Joey Roger ROGJ13039302
+ *                Catherine Boivin BOIC19518909
+ *******************************************************/
 import java.util.ArrayList;
-import java.util.HashMap;
 
-/**
- * Created by Joey Roger on 2017-06-26.
- */
 public class EtatGlobal {
+    public ArrayList<EtatLocal> etatsLocaux;
+    private int montantBanque;
+    private int idSuccursaleRacine;
 
-    public ArrayList<EtatLocal> etatLocauxlocasse;
-    public int montantBanque;
-
-    public EtatGlobal(int montantBanque){
-        etatLocauxlocasse =  new ArrayList<EtatLocal>();
+    public EtatGlobal(int montantBanque, int idSuccursaleRacine){
+        etatsLocaux =  new ArrayList<EtatLocal>();
         this.montantBanque = montantBanque;
+        this.idSuccursaleRacine = idSuccursaleRacine;
     }
 
+    public ArrayList<EtatLocal> obtenirEtatsLocaux() {
+        return this.etatsLocaux;
+    }
+
+    //Override du toString permettant d'afficher toutes les informations de la capture de l'état global
     public String toString(){
         String chaineFinale = "";
         int montantDetecte = 0;
         ArrayList<Canal> canauxFinal = new ArrayList<Canal>();
 
-        chaineFinale += "Succursale d'origine de la capture : #" + etatLocauxlocasse.get(0).obtenirSuccursaleRacine() + "\r\n";
+        chaineFinale += "Succursale d'origine de la capture : #" + this.idSuccursaleRacine + "\r\n";
 
-        for (EtatLocal etatLocal:etatLocauxlocasse){
-
+        for (EtatLocal etatLocal: etatsLocaux){
             chaineFinale += "Succursale #" + etatLocal.obtenirIdSuccusale() + " : " + etatLocal.obtenirMontant() + "$\r\n";
             montantDetecte += etatLocal.obtenirMontant();
 
+            //Vérification des doublons pour ne pas les afficher
             for (Canal canal1:etatLocal.canaux) {
-
                 boolean onAjoute = true;
 
                 for (Canal canal2 : canauxFinal) {
-                    if(canal1.obtenirSuccursaleSource() == canal2.obtenirSuccursaleDestination() && canal1.obtenirSuccursaleDestination() == canal2.obtenirSuccursaleSource())
-                    {
-                        canal2.assignerMontant(Math.abs(canal1.obtenirMontant() - canal2.obtenirMontant()));
+                    if(canal1.obtenirSuccursaleSource() == canal2.obtenirSuccursaleDestination() && canal1.obtenirSuccursaleDestination() == canal2.obtenirSuccursaleSource()) {
+                        canal2.ajouterMontant(canal1.obtenirMontant());
                         onAjoute = false;
                     }
                 }
@@ -54,9 +59,10 @@ public class EtatGlobal {
         chaineFinale += "Somme detectee par la par la capture : " + montantDetecte + "$\r\n";
 
         if(montantDetecte == montantBanque)
-            chaineFinale += "ETAT GLOBAL COHERENT !!!";
+            chaineFinale += "ETAT GLOBAL COHERENT !!!\r\n";
         else
-            chaineFinale += "ETAT GLOBAL INCOHERENT !!!";
+            chaineFinale += "ETAT GLOBAL INCOHERENT !!!\r\n";
+
 
         return chaineFinale;
     }

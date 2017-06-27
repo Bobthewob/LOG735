@@ -13,8 +13,7 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Banque implements IBanque {
-
-    public HashMap<Integer,ISuccursale> listeSuccursale = new HashMap<Integer,ISuccursale>();
+    private HashMap<Integer,ISuccursale> listeSuccursale = new HashMap<Integer,ISuccursale>();
     private AtomicInteger idCompteur = new AtomicInteger();
     private AtomicInteger montantTotal = new AtomicInteger();
     private AtomicInteger idEtat = new AtomicInteger();
@@ -25,12 +24,13 @@ public class Banque implements IBanque {
         idEtat.set(0);
     }
 
+    //Méthode permettant d'accepter les connexionx de succursales à la banque
     public HashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception{
         montantTotal.addAndGet(nouvelleSuccursale.obtenirMontant());
 
         System.out.println("Ajout d'une succursale ayant le montant "+ nouvelleSuccursale.obtenirMontant() +", montant total est de " + montantTotal);
 
-        nouvelleSuccursale.assignerId(idCompteur.incrementAndGet());
+        nouvelleSuccursale.assignerId(idCompteur.incrementAndGet()); //Attribution de l'identifiant unique
         listeSuccursale.put(nouvelleSuccursale.obtenirId(), nouvelleSuccursale);
 
         return listeSuccursale;
@@ -44,6 +44,7 @@ public class Banque implements IBanque {
         return idEtat.getAndIncrement();
     }
 
+    //Démarrage de la banque
     public static void main(String[] args) {
         try {
             System.out.println("Demarrage de la banque.");

@@ -9,7 +9,6 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.HashMap;
 
-
 public interface IBanque extends Remote {
     HashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception;
     int obtenirMontantTotal() throws RemoteException;

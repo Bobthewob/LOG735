@@ -18,18 +18,12 @@ public class TransfertFils extends Thread {
         this.idSource = idSource;
     }
 
+    //Déclenche des transferts automatiques à une succursale aléatoire à toutes les 5 secondes
     public void run(){
-
         try{
             while (true){
-
                 int waitTime = (seed.nextInt(6) + 5) * 1000;
-
-                long startTime = System.currentTimeMillis();
-
-                while (System.currentTimeMillis() < (startTime + waitTime)){
-                    Thread.sleep(100);
-                }
+                Thread.sleep(waitTime);
 
                 if(this.listeSuccursale.size() == 1){
                     System.out.println("Aucune succursale valide pour le transfert.");
@@ -39,6 +33,7 @@ public class TransfertFils extends Thread {
                     ISuccursale succDest;
                     Object[] tableauSucc = this.listeSuccursale.values().toArray();
 
+                    //Sélection de la succursale de destination
                     do {
                         succDest = (ISuccursale) tableauSucc[seed.nextInt(tableauSucc.length)];
                     } while (succDest.obtenirId() == this.idSource);

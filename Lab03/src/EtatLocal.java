@@ -1,10 +1,14 @@
+/*******************************************************
+ * Cours :        LOG735-E17 Groupe 01
+ * Projet :       Laboratoire #3
+ * Etudiants :    Philippe Rhéaume RHEP11089407
+ *                Joey Roger ROGJ13039302
+ *                Catherine Boivin BOIC19518909
+ *******************************************************/
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * Created by Joey Roger on 2017-06-26.
- */
 public class EtatLocal implements Serializable{
 
     private int idEtatLocal;
@@ -13,6 +17,7 @@ public class EtatLocal implements Serializable{
     private int nombreEnregistrementTermine = 0;
     private int nombreTotalCanauxAEnregistre;
     private boolean enregistrementTermine = false;
+    private int montant;
     public ArrayList<Canal> canaux;
 
     public boolean obtenirEnregistrementTermine(){
@@ -21,7 +26,6 @@ public class EtatLocal implements Serializable{
 
     public void incrementerEnregistrementTermine(){
         ++nombreEnregistrementTermine;
-
         enregistrementTermine = (nombreTotalCanauxAEnregistre == nombreEnregistrementTermine);
     }
 
@@ -33,31 +37,29 @@ public class EtatLocal implements Serializable{
         return idEtatLocal;
     }
 
-    private int montant;
-
     public int obtenirMontant(){
         return montant;
     }
 
-    public EtatLocal(int idEtatLocal, int idSuccursale, int montant, int nombreTotalCanauxAEnregistre, int idSuccursaleRacine){ //premier snapshot fait lorsqu'on recoit le premier marqueur
+    //Constructeur pour l'état local de la succursale initiatrice
+    public EtatLocal(int idEtatLocal, int idSuccursale, int montant, int nombreTotalCanauxAEnregistre, int idSuccursaleRacine){
         canaux = new ArrayList<Canal>();
         this.idEtatLocal = idEtatLocal;
         this.idSuccursale = idSuccursale;
         this.montant = montant;
         this.nombreTotalCanauxAEnregistre = nombreTotalCanauxAEnregistre;
         this.idSuccursaleRacine = idSuccursaleRacine;
-
         enregistrementTermine = (this.nombreTotalCanauxAEnregistre == 0);
     }
 
-    public EtatLocal(int idEtatLocal, int idSuccursale, int montant, int nombreTotalCanauxAEnregistre){ //premier snapshot fait lorsqu'on recoit le premier marqueur
+    //Constructeur pour les succursales non initiatrices
+    public EtatLocal(int idEtatLocal, int idSuccursale, int montant, int nombreTotalCanauxAEnregistre){
         canaux = new ArrayList<Canal>();
         this.idEtatLocal = idEtatLocal;
         this.idSuccursale = idSuccursale;
         this.montant = montant;
         this.nombreTotalCanauxAEnregistre = nombreTotalCanauxAEnregistre;
         this.idSuccursaleRacine = idSuccursale;
-
         enregistrementTermine = (this.nombreTotalCanauxAEnregistre == 0);
     }
 
@@ -65,17 +67,20 @@ public class EtatLocal implements Serializable{
         return idSuccursaleRacine;
     }
 
+    //Enregistre un canal à l'état local
     public void enregistrerCanal(int succSource, int montant){
         boolean canalExisteDeja = false;
 
         for (Canal canal:canaux) {
             if(canal.obtenirSuccursaleSource() == succSource){
                 canalExisteDeja = true;
-                canal.assignerMontant(canal.obtenirMontant() + montant);
+                //Si le canal existe déjà, le montant est additionné
+                canal.ajouterMontant(montant);
             }
         }
 
-        if(!canalExisteDeja) { //si le canal n'existe pas nous en creeons un nouveau
+        //Évite l'enregistrement de doublons
+        if(!canalExisteDeja) {
             canaux.add(new Canal(montant, this.idSuccursale, succSource));
         }
     }

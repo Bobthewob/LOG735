@@ -1,18 +1,22 @@
+/*******************************************************
+ * Cours :        LOG735-E17 Groupe 01
+ * Projet :       Laboratoire #3
+ * Etudiants :    Philippe Rhéaume RHEP11089407
+ *                Joey Roger ROGJ13039302
+ *                Catherine Boivin BOIC19518909
+ *******************************************************/
 import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Created by Joey Roger on 2017-06-26.
- */
 public class Canal implements Serializable {
-
-    private int montant;
+    private AtomicInteger montant = new AtomicInteger();
 
     public int obtenirMontant() {
-        return montant;
+        return montant.get();
     }
 
-    public void assignerMontant(int montant) {
-        this.montant = montant;
+    public void ajouterMontant(int montant) {
+        this.montant.getAndAdd(montant);
     }
 
     private int succursaleDestination;
@@ -28,7 +32,7 @@ public class Canal implements Serializable {
     }
 
     public Canal(int montant, int succursaleDestination, int succursaleSource){
-        this.montant = montant;
+        this.montant.set(montant);
         this.succursaleDestination = succursaleDestination;
         this.succursaleSource = succursaleSource;
     }
