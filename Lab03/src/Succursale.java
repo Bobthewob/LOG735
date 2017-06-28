@@ -214,12 +214,13 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
             Registry registry = LocateRegistry.getRegistry(adresseIP, 10000);
             IBanque b = (IBanque) registry.lookup("Banque");
 
+            this.lock.lock();
             int idEtatGlobal = b.obtenirIdEtat();
             listeGlobale.put(idEtatGlobal, new EtatGlobal(b.obtenirMontantTotal(), this.id));
 
             EtatLocal etatLocal = new EtatLocal(idEtatGlobal, obtenirId(), obtenirMontant(), listeSuccursale.size() - 1);
             etatsLocaux.add(etatLocal);
-
+            this.lock.unlock();
             Thread.sleep(5000); // on simule la meme attente que le transfert d'argent
 
             for (Map.Entry<Integer, ISuccursale> succ : listeSuccursale.entrySet()) {
