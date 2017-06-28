@@ -7,10 +7,10 @@
  *******************************************************/
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public interface IBanque extends Remote {
-    HashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception;
+    ConcurrentHashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception;
     int obtenirMontantTotal() throws RemoteException;
     int obtenirIdEtat() throws RemoteException;
 }

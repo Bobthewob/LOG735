@@ -9,11 +9,11 @@ import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Banque implements IBanque {
-    private HashMap<Integer,ISuccursale> listeSuccursale = new HashMap<Integer,ISuccursale>();
+    private ConcurrentHashMap<Integer,ISuccursale> listeSuccursale = new ConcurrentHashMap<Integer,ISuccursale>();
     private AtomicInteger idCompteur = new AtomicInteger();
     private AtomicInteger montantTotal = new AtomicInteger();
     private AtomicInteger idEtat = new AtomicInteger();
@@ -25,7 +25,7 @@ public class Banque implements IBanque {
     }
 
     //Méthode permettant d'accepter les connexionx de succursales à la banque
-    public HashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception{
+    public ConcurrentHashMap<Integer,ISuccursale> connexion(ISuccursale nouvelleSuccursale) throws Exception{
         montantTotal.addAndGet(nouvelleSuccursale.obtenirMontant());
 
         System.out.println("Ajout d'une succursale ayant le montant "+ nouvelleSuccursale.obtenirMontant() +", montant total est de " + montantTotal);

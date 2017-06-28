@@ -6,19 +6,20 @@
  *                Catherine Boivin BOIC19518909
  *******************************************************/
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class EtatGlobal {
-    public ArrayList<EtatLocal> etatsLocaux;
+    public ConcurrentLinkedQueue<EtatLocal> etatsLocaux;
     private int montantBanque;
     private int idSuccursaleRacine;
 
     public EtatGlobal(int montantBanque, int idSuccursaleRacine){
-        etatsLocaux =  new ArrayList<EtatLocal>();
+        etatsLocaux =  new ConcurrentLinkedQueue<EtatLocal>();
         this.montantBanque = montantBanque;
         this.idSuccursaleRacine = idSuccursaleRacine;
     }
 
-    public ArrayList<EtatLocal> obtenirEtatsLocaux() {
+    public ConcurrentLinkedQueue<EtatLocal> obtenirEtatsLocaux() {
         return this.etatsLocaux;
     }
 
@@ -59,10 +60,9 @@ public class EtatGlobal {
         chaineFinale += "Somme detectee par la par la capture : " + montantDetecte + "$\r\n";
 
         if(montantDetecte == montantBanque)
-            chaineFinale += "ETAT GLOBAL COHERENT !!!\r\n";
+            chaineFinale += "ETAT GLOBAL COHERENT !!!\r\n\r\n";
         else
-            chaineFinale += "ETAT GLOBAL INCOHERENT !!!\r\n";
-
+            chaineFinale += "ETAT GLOBAL INCOHERENT !!!\r\n\r\n";
 
         return chaineFinale;
     }

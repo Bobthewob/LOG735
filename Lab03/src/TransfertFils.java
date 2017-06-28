@@ -5,15 +5,15 @@
  *                Joey Roger ROGJ13039302
  *                Catherine Boivin BOIC19518909
  *******************************************************/
-import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TransfertFils extends Thread {
-    private HashMap<Integer,ISuccursale> listeSuccursale;
+    private ConcurrentHashMap<Integer,ISuccursale> listeSuccursale;
     private int idSource;
     private final Random seed = new Random();
 
-    public TransfertFils(HashMap<Integer,ISuccursale> listeSuccursale, int idSource){
+    public TransfertFils(ConcurrentHashMap<Integer,ISuccursale> listeSuccursale, int idSource){
         this.listeSuccursale = listeSuccursale;
         this.idSource = idSource;
     }
