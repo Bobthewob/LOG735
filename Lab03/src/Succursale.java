@@ -255,8 +255,11 @@ public class Succursale extends UnicastRemoteObject implements Serializable,ISuc
 
             if (!etatLocalExisteDeja) { // premier marqueur recu
                 EtatLocal etatLocalCourant = new EtatLocal(idEtatGlobal, obtenirId(), obtenirMontant(), listeSuccursale.size() - 2, idSuccRacine); //on enregistre notre etat
-
                 etatsLocaux.add(etatLocalCourant);
+
+                //S'il y a seulement 2 succursales
+                if(etatLocalCourant.obtenirEnregistrementTermine())
+                    listeSuccursale.get(etatLocalCourant.obtenirSuccursaleRacine()).ajouterEtatLocal(etatLocalCourant);
 
                 //on broadcast aux autres succursales
                 Thread.sleep(5000); // on simule la meme attente que le transfert d'argent
