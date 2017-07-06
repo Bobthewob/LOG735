@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <!-- Bootstrap -->
+        <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="workspace.css" rel="stylesheet">
+
+        <title>LOG735 - Workspace</title>
+    </head>
+    <body>
+        <!--Template Jumbotron from Bootstrap -->
+        <nav class="navbar navbar-inverse navbar-fixed-top">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#">LOG735 - Éditeur de texte distribué</a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+              <form class="navbar-form navbar-right">
+                <div class="form-group">
+                  <input type="text" placeholder="Nickname" id="txtNickname" class="form-control" value="test">
+                </div>
+                <div class="form-group">
+                  <input type="text" placeholder="IP Address" id="txtIpAddress" class="form-control" value="127.0.0.1">
+                </div>
+                <div class="form-group">
+                  <input type="text" placeholder="Port" id="txtPort" class="form-control" value="8080">
+                </div>
+                <input type="button" class="btn btn-success" id="login" value="Login">
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="jumbotron">
+          <div class="container">
+            <div class="alert alert-success" id="msgLoginSuccess" style="display: none;">
+              <strong>Success!</strong> You are now connected to the shared file.
+            </div>
+            <div class="alert alert-danger" id="msgLoginFailure" style="display: none;">
+              <strong>Failure!</strong> No servers were found with that IP and Port combination.
+            </div>
+            <h2>Shared file</h2>
+            <textarea class="big-textarea" id="sharedText"></textarea>
+            <label id=lblCurrentWriter>Current writer :</label>
+          </div>
+        </div>
+
+        <div class="container">
+          <div class="row">
+            <div class="col-md-6">
+                <input type="button" class="btn btn-default requestButton" name="btnRequestRight" value="Request writing right">
+                <br>
+                <input type="button" class="btn btn-default requestButton" name="btnReleaseRight" value="Release writing right">
+            </div>
+            <div class="col-md-6">
+                <label>Writing rights log</label>
+                <textarea class="small-textarea" readonly></textarea>
+           </div>
+          </div>
+
+            <hr>
+
+          <footer>
+            <p>&copy; 2017, Équipe 2.</p>
+          </footer>
+        </div>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+        <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+        <script src="./workspace.js"></script>
+    </body>
+</html>

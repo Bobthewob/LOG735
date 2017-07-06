@@ -1,0 +1,14 @@
+{
+  "name": "lab04",
+  "version": "1.0.0",
+  "description": "LOG735 - Projet de session",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Equipe 02",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^3.0.0"
+  }
+}
