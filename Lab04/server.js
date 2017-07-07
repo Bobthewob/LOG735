@@ -40,8 +40,8 @@ wss.on('connection', function (ws) {
 
 				if (currentWriter == ws.id) {
 					ws.send('{ "type":"hasRights" }');
-		        	//var data = '{ "type":"newWriter", "nickname":"'+ crypt(ws.nickname) +' "}';
-					//broadcastToEveryoneElse(data);
+		        	var data = '{ "type":"newWriter", "nickname":"'+ crypt(ws.nickname) +' "}';
+					broadcastToEveryoneElse(ws, data);
 				}
 		        break;
 
