@@ -22,6 +22,13 @@ wss.on('connection', function (ws) {
   	ws.send('{ "type":"idRequest", "id":"'+ crypt(currentId.toString()) +' "}'); //Informs the workspace of his ID
   	currentId++;
 
+  	//If a workspace connects and there's a current writer
+  	if (currentWriter != null) {
+  		console.log("hihi");
+		var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[currentWriter].nickname) +' "}';
+		ws.send(data);
+  	}
+
     //When a workspace sends a message to the server
   	ws.on("message", function (str) {
 	    var object = JSON.parse(str);

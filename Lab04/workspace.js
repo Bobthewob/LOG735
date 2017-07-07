@@ -50,7 +50,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 			case "hasRights":
 			    document.getElementById("sharedText").readOnly = false;
 			    $("#lblCurrentWriter").text("Current writer : " + nickname);
-			    logInfo("You know have writing rights!");
+			    logInfo("You now have writing rights!");
 			    break;
 
 			case "newWriter":
