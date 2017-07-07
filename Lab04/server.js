@@ -16,14 +16,12 @@ ws.on('connection', function (ws) {
   	console.log("Browser connected online...");
    
   	ws.on("message", function (str) {
-	    var object = decrypt(str);
-	    console.log(object);
+	    var object = JSON.parse(str);
 	    switch(object.type) {
 	        //A new workspace connects and requests and ID from the server
 	        case 'idRequest':
-		        console.log(crypt('{ "type" : "idRequest" }' ));
-   				ws.send(crypt('{ "type" : "idRequest" }' ));
-
+		        console.log("Received idRequest");     
+    			ws.send('{ "type":"idRequest", "id":"'+ crypt(currentId.toString()) +' "}'); 
 		        currentId++;
 		        break;
 	    	}   
@@ -34,6 +32,7 @@ ws.on('connection', function (ws) {
     })
 });
 
+
 //Returns a crypted object
 function crypt(object) {
 	return CryptoJS.AES.encrypt(object, PrivateKey);
@@ -42,5 +41,5 @@ function crypt(object) {
 //Returns a decrypted object
 function decrypt(object) {
 	var bytes  = CryptoJS.AES.decrypt(object.toString(), PrivateKey);
-	return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+	return bytes.toString(CryptoJS.enc.Utf8);
 }

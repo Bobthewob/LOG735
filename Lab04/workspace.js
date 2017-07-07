@@ -24,8 +24,7 @@ function connectToServer(ipAddress, port, firstConnection) {
   ws = new WebSocket("ws://"+ipAddress+":"+port);
 
   ws.onopen = function (event) {
-  	console.log(crypt('{ "type" : "idRequest" }' ));
-    ws.send(crypt('{ "type" : "idRequest" }' )); 
+    ws.send('{ "type":"idRequest" }'); 
 
     if (firstConnection) {
       $("#msgLoginSuccess").css("display", "").delay(5000).fadeOut(400);
@@ -33,11 +32,11 @@ function connectToServer(ipAddress, port, firstConnection) {
   };
 
   ws.onmessage = function(event) { 
-    var message = decrypt(event);
+    var message = JSON.parse(event.data);
     console.log(message);
     switch(message.type) {
       case "idRequest":
-        console.log(message.id);
+        console.log(decrypt(message.id));
         break;
     }
   };
@@ -56,11 +55,11 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 //Returns a crypted object
 function crypt(object) {
-	return CryptoJS.AES.encrypt(object, PrivateKey).toString();
+	return CryptoJS.AES.encrypt(object, PrivateKey);
 }
 
 //Returns a decrypted object
 function decrypt(object) {
-	var bytes  = CryptoJS.AES.decrypt(object, PrivateKey);
-	return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+	var bytes  = CryptoJS.AES.decrypt(object.toString(), PrivateKey);
+	return bytes.toString(CryptoJS.enc.Utf8);
 }
