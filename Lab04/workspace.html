@@ -34,7 +34,7 @@
                 <div class="form-group">
                   <input type="text" placeholder="Port" id="txtPort" class="form-control" value="8080">
                 </div>
-                <input type="button" class="btn btn-success" id="login" value="Login">
+                <input type="button" class="btn btn-success" id="btnLogin" value="Login">
               </form>
             </div>
           </div>
@@ -49,21 +49,21 @@
               <strong>Failure!</strong> No servers were found with that IP and Port combination.
             </div>
             <h2>Shared file</h2>
-            <textarea class="big-textarea" id="sharedText"></textarea>
-            <label id=lblCurrentWriter>Current writer :</label>
+            <textarea class="big-textarea" id="sharedText" readonly></textarea>
+            <label id="lblCurrentWriter">Current writer :</label>
           </div>
         </div>
 
         <div class="container">
           <div class="row">
             <div class="col-md-6">
-                <input type="button" class="btn btn-default requestButton" name="btnRequestRight" value="Request writing right">
+                <input type="button" class="btn btn-default requestButton" id="btnRequestRight" value="Request writing right">
                 <br>
-                <input type="button" class="btn btn-default requestButton" name="btnReleaseRight" value="Release writing right">
+                <input type="button" class="btn btn-default requestButton" id="btnReleaseRight" value="Release writing right">
             </div>
             <div class="col-md-6">
                 <label>Writing rights log</label>
-                <textarea class="small-textarea" readonly></textarea>
+                <textarea class="small-textarea" readonly id="txtLog"></textarea>
            </div>
           </div>
 
