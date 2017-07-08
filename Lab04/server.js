@@ -1,3 +1,11 @@
+/*******************************************************
+ * Cours :        LOG735-E17 Groupe 01
+ * Projet :       Projet de session
+ * Etudiants :    Philippe Rhéaume RHEP11089407
+ *                Joey Roger ROGJ13039302
+ *                Catherine Boivin BOIC19518909
+ *******************************************************/
+
 //Server initialisation
 const WebSocketServer = require("ws").Server;
 const CryptoJS = require("crypto-js");
@@ -81,6 +89,17 @@ wss.on('connection', function (ws) {
 		    	var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
 		    	broadcastToEveryoneElse(ws, data);
 		        break;
+
+		    case 'updateSharedText':
+		    	if (currentWriter == ws.id) {
+		    		var newText = decrypt(object.sharedText);
+		    		sharedText = newText; //Update the new text
+		    	}
+
+		    	//send updated text to other workspaces
+		    	var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
+		    	broadcastToEveryoneElse(ws, data);
+		    	break;
 	    }   
     })
 
@@ -179,6 +198,8 @@ function updateQueuePosition(ws, leaverPositionInQueue) {
 	});
 }
 
+
+//Assigns the next writer if the queue is not empty, send a notice to workspace about the new writer and updates the queue positions
 function assignNextWriter(ws) {
 	if (typeof writingFifo[0] != 'undefined') {
 		currentWriter = writingFifo[0];

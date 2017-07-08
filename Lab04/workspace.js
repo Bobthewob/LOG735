@@ -1,8 +1,16 @@
+/*******************************************************
+ * Cours :        LOG735-E17 Groupe 01
+ * Projet :       Projet de session
+ * Etudiants :    Philippe Rhéaume RHEP11089407
+ *                Joey Roger ROGJ13039302
+ *                Catherine Boivin BOIC19518909
+ *******************************************************/
 const PrivateKey = 'LOG735';
 
 var ws;
 var id;
 var thisNickname;
+var periodicCall;
 
 //Login button click method. Sets nickname and calls connectToServer with input values
 $( "#btnLogin" ).click(function() {
@@ -38,24 +46,33 @@ function connectToServer(ipAddress, port, firstConnection) {
 		    	ws.send('{ "type":"nicknameRequest", "nickname":"' + crypt(thisNickname)+ '" }');
 		    break;
 
+		    //Notices the workspace when a new user connects
 			case "newUser":
 			    nickname = decrypt(message.nickname);
 			    logInfo(nickname + " has joined the session.");
 			    break;
 
+			//Notices the workspace when a user leaves the session
 			case "userLeft":
 			    nickname = decrypt(message.nickname);
 			    logInfo(nickname + " has left the session.");
 			    break;
 
+			//Triggered when the workspace obtains writing rights
 			case "hasRights":
 			    updateCurrentWriter(thisNickname);
 			    logInfo("You now have writing rights!");
+
+			    periodicCall = setInterval(function(){
+			    	ws.send('{ "type":"updateSharedText", "sharedText":"'+ crypt($("#sharedText").val()) +'" }');
+			    }, 5000);
 
 			    $("#sharedText").prop("readOnly", false);
 			    $("#btnReleaseRight").val("Release writing rights");
 			    break;
 
+
+			//Notices the workspace when their position in queue changed
 	     	case "positionInQueue":
 	        	position = decrypt(message.position);
 	        	logInfo("You are now position "+ position + " in queue!");
@@ -63,6 +80,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 			    $("#btnReleaseRight").val("Leave queue");
 	          	break;
 
+	        //Notices the workspaces when there's a new writer
 			case "newWriter":
 			    nickname = decrypt(message.nickname);
 
@@ -76,10 +94,12 @@ function connectToServer(ipAddress, port, firstConnection) {
 			   	updateCurrentWriter(nickname);
 			    break;
 
+			//Notices the workspace that they successfully left the queue
 		    case "leftQueue":
 		    	logInfo("You have left the queue.")
 		    	break;
 
+		    //Updates the shared text
 		    case "updateSharedText":
 		    	$("#sharedText").val(decrypt(message.newText));
 		    	break;
@@ -93,6 +113,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 		}
 	};
 
+	//Triggered when the server is closed
 	ws.onclose = function (event) {
 		console.log("serveur fermé");
 	};
@@ -114,9 +135,12 @@ function connectToServer(ipAddress, port, firstConnection) {
 	    $("#btnReleaseRight").prop('disabled',true);
 	    $("#btnRequestRight").prop('disabled',false);
 	    $("#sharedText").prop("readOnly", true);
+
+	    clearInterval(periodicCall); //stop periodically calling server to save text
 	});
 }
 
+//Updates the label showing the current writer
 function updateCurrentWriter(str) {
 	$("#lblCurrentWriter").text("Current writer : " + str);
 }
