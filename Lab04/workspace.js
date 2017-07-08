@@ -15,7 +15,7 @@ $( "#btnLogin" ).click(function() {
     var port = $.trim($("#txtPort").val());
 
     connectToServer(ipAddress, port, true);
-    
+
     $("#btnLogin").prop("disabled", true);
   }  
 });
@@ -41,12 +41,12 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 			case "newUser":
 			    nickname = decrypt(message.nickname);
-			    logInfo(nickname + " has joined the session");
+			    logInfo(nickname + " has joined the session.");
 			    break;
 
 			case "userLeft":
 			    nickname = decrypt(message.nickname);
-			    logInfo(nickname + " has left the session");
+			    logInfo(nickname + " has left the session.");
 			    break;
 
 			case "hasRights":
@@ -68,7 +68,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 			    nickname = decrypt(message.nickname);
 
 			    if (nickname == '') {
-					logInfo("The queue is now empty");
+					logInfo("The queue is now empty.");
 			    }
 			    else {
 			    	logInfo(nickname + " now has writing rights!");
@@ -76,6 +76,10 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 			   	updateCurrentWriter(nickname);
 			    break;
+
+		    case "leftQueue":
+		    	logInfo("You have left the queue.")
+		    	break;
 		}
 	};
 

@@ -40,7 +40,6 @@ wss.on('connection', function (ws) {
 		        broadcastToEveryoneElse(ws, data);
 		        break;
 
-		    //
 		    case 'writingRequest':
 				writingRequest(ws.id);
 
@@ -51,7 +50,7 @@ wss.on('connection', function (ws) {
 				}
 				else {
 					//Send the position of the client in the FIFO to the client
-					var data = '{ "type":"positionInQueue", "position":"'+ crypt((writingFifo.indexOf(ws.id) + 1).toString())+'" }';
+					var data = '{ "type":"positionInQueue", "position":"'+ crypt((getPositionInQueue(ws.id)).toString())+'" }';
 					ws.send(data);
 				}
 		        break;
@@ -64,8 +63,9 @@ wss.on('connection', function (ws) {
 		    			workspaces[writingFifo[0]].send('{ "type":"hasRights" }');
 		        		var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[writingFifo[0]].nickname) +' "}';
 						broadcastToEveryoneElse(workspaces[writingFifo[0]], data);
-						
+
 						shiftFifo(); //dequeue
+						updateQueuePosition(ws, 0); //When the first one in queue is removed, everyone's position is updated
 		    		}
 		    		else {
 		    			currentWriter = null;
@@ -75,7 +75,10 @@ wss.on('connection', function (ws) {
 		    	}
 		    	//Workspace just wants to leave the queue
 		    	else {
+		    		var currentPosition =  getPositionInQueue(ws.id);
 		    		removeFromFifo(ws.id);
+		    		updateQueuePosition(ws, currentPosition); //When someone leaves the queue, only the ones after him have to be updated
+		    		ws.send('{ "type":"leftQueue" }');
 		    	}
 		        break;
 	    }   
@@ -95,9 +98,9 @@ wss.on('connection', function (ws) {
 function broadcastToEveryoneElse(ws, data) {
 	//Broadcast to other workspaces
 	wss.clients.forEach(function each(client) {
-	  if (client !== ws && client.readyState === 1) {
-	    client.send(data);
-	  }
+		if (client !== ws && client.readyState === 1) {
+	    	client.send(data);
+		}
 	});
 }
 
@@ -105,16 +108,16 @@ function broadcastToEveryoneElse(ws, data) {
 function broadcast(data) {
 	//Broadcast to other workspaces
 	wss.clients.forEach(function each(client) {
-	  if (client.readyState === 1) {
-	    client.send(data);
-	  }
+		if (client.readyState === 1) {
+	    	client.send(data);
+		}
 	});
 }
 
 //Manage insertion into Fifo and sets currentWriter if empty
 function writingRequest(workspaceId) {
 	//Make sure the workspace is not already in the FIFO
-	if (writingFifo.indexOf(workspaceId) == -1) {
+	if (checkIfInQueue(workspaceId) == -1) {
 		//Check is FIFO is empty, if so sets current writer
 		if (writingFifo.length == 0 && currentWriter == null) {
 			currentWriter = workspaceId;
@@ -125,10 +128,9 @@ function writingRequest(workspaceId) {
 	}
 }
 
-//Used a workspace is closed ans it was still in the fifo
+//Removes a specific workspace from the queue
 function removeFromFifo(workspaceId) {
-	var index = writingFifo.indexOf(workspaceId);
-
+	var index = checkIfInQueue(workspaceId);
 	if (index != -1) {
 	    writingFifo.splice(index, 1);
 	}
@@ -140,6 +142,29 @@ function shiftFifo() {
 		currentWriter = writingFifo.shift();
 		return currentWriter;
 	}
+}
+
+//Returns the position of the workspace in the queue, adds 1 so first position is "1" and not "0"
+function getPositionInQueue(id) {
+	return writingFifo.indexOf(id) + 1;
+}
+
+//Check if the workspace is in queue, returns -1 if it isn't
+function checkIfInQueue(id) {
+	return writingFifo.indexOf(id);
+}
+
+//When the writer releases his rights or somebody leaves the queue, updates new positions
+function updateQueuePosition(ws, leaverPositionInQueue) {
+	//Broadcast to other workspaces
+	wss.clients.forEach(function each(client) {
+		var workspacePositionInQueue = getPositionInQueue(client.id);
+		//Check if the workspace is in the queue and if his position changed
+		if (client !== ws && client.readyState === 1 && workspacePositionInQueue > 0 && leaverPositionInQueue <= workspacePositionInQueue && client.id != currentWriter) {  //dirty af, but idk what else to do
+	    	var data = '{ "type":"positionInQueue", "position":"'+ crypt((getPositionInQueue(client.id)).toString())+'" }';
+			client.send(data);
+		}
+	});
 }
 
 //Returns a crypted object
