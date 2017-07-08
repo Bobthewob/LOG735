@@ -15,8 +15,6 @@ $( "#btnLogin" ).click(function() {
     var port = $.trim($("#txtPort").val());
 
     connectToServer(ipAddress, port, true);
-
-    $("#btnLogin").prop("disabled", true);
   }  
 });
 
@@ -26,7 +24,8 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 	ws.onopen = function (event) {
 		if (firstConnection) {
-		  $("#msgLoginSuccess").css("display", "").delay(5000).fadeOut(400);
+		 	$("#msgLoginSuccess").css("display", "").delay(5000).fadeOut(400);
+    		$("#btnLogin").prop("disabled", true);
 		}
 	};
 
@@ -80,6 +79,10 @@ function connectToServer(ipAddress, port, firstConnection) {
 		    case "leftQueue":
 		    	logInfo("You have left the queue.")
 		    	break;
+
+		    case "updateSharedText":
+		    	$("#sharedText").val(decrypt(message.newText));
+		    	break;
 		}
 	};
 
@@ -95,7 +98,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 	};
 
 	//Requests access to write
-	$( "#btnRequestRight").click(function() {
+	$("#btnRequestRight").click(function() {
 		ws.send('{ "type":"writingRequest" }');
 
 		//Update controls
@@ -105,7 +108,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 	//Release writing rights
 	$( "#btnReleaseRight").click(function() {
-		ws.send('{ "type":"releaseRequest" }');
+		ws.send('{ "type":"releaseRequest", "sharedText":"'+ crypt($("#sharedText").val()) +'" }');
 
 		//Update controls
 	    $("#btnReleaseRight").prop('disabled',true);
