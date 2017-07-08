@@ -6,15 +6,17 @@ var thisNickname;
 
 //Login button click method. Sets nickname and calls connectToServer with input values
 $( "#btnLogin" ).click(function() {
-  if($.trim($('#txtNickname').val()) == '' || $.trim($('#txtIpAddress').val()) == '' || $.trim($('#txtPort').val()) == '') {
+  if($.trim($("#txtNickname").val()) == '' || $.trim($("#txtIpAddress").val()) == '' || $.trim($("#txtPort").val()) == '') {
       alert('You must enter a nickname, an IP address and a port');
   }
   else {
-    thisNickname = $.trim($('#txtNickname').val());
-    var ipAddress = $.trim($('#txtIpAddress').val());
-    var port = $.trim($('#txtPort').val());
+    thisNickname = $.trim($("#txtNickname").val());
+    var ipAddress = $.trim($("#txtIpAddress").val());
+    var port = $.trim($("#txtPort").val());
+
     connectToServer(ipAddress, port, true);
-    $('#btnLogin').prop('disabled', true);
+    
+    $("#btnLogin").prop("disabled", true);
   }  
 });
 
@@ -32,9 +34,9 @@ function connectToServer(ipAddress, port, firstConnection) {
 		var message = JSON.parse(event.data);
 
 		switch(message.type) {
-		  case "idRequest":
-		    id = message.id;
-		    ws.send('{ "type":"nicknameRequest", "nickname":"' + crypt(thisNickname)+ '" }');
+			case "idRequest":
+		    	id = message.id;
+		    	ws.send('{ "type":"nicknameRequest", "nickname":"' + crypt(thisNickname)+ '" }');
 		    break;
 
 			case "newUser":
@@ -48,23 +50,36 @@ function connectToServer(ipAddress, port, firstConnection) {
 			    break;
 
 			case "hasRights":
-			    document.getElementById("sharedText").readOnly = false;
-			    $("#lblCurrentWriter").text("Current writer : " + thisNickname);
+			    updateCurrentWriter(thisNickname);
 			    logInfo("You now have writing rights!");
+
+			    $("#sharedText").prop("readOnly", false);
+			    $("#btnReleaseRight").val("Release writing rights");
 			    break;
-      case "positionInQueue":
-          position = decrypt(message.position);
-          logInfo(thisNickname + " is now position "+ position + " in fifo!");
-          break;
+
+	     	case "positionInQueue":
+	        	position = decrypt(message.position);
+	        	logInfo("You are now position "+ position + " in queue!");
+
+			    $("#btnReleaseRight").val("Leave queue");
+	          	break;
 
 			case "newWriter":
 			    nickname = decrypt(message.nickname);
-			    logInfo(nickname + " now has writing rights!");
-			    $("#lblCurrentWriter").text("Current writer : " + nickname);
+
+			    if (nickname == '') {
+					logInfo("The queue is now empty");
+			    }
+			    else {
+			    	logInfo(nickname + " now has writing rights!");
+			    }
+
+			   	updateCurrentWriter(nickname);
 			    break;
 		}
 	};
 
+	//When the workspace fails to connect to a server
 	ws.onerror = function(event){
 		if (firstConnection) {
 		  $("#msgLoginFailure").css("display", "").delay(5000).fadeOut(400);
@@ -78,17 +93,25 @@ function connectToServer(ipAddress, port, firstConnection) {
 	//Requests access to write
 	$( "#btnRequestRight").click(function() {
 		ws.send('{ "type":"writingRequest" }');
-    $( "#btnRequestRight").prop('disabled',true);
-    $( "#btnReleaseRight").prop('disabled',false);
+
+		//Update controls
+	    $("#btnRequestRight").prop('disabled',true);
+	    $("#btnReleaseRight").prop('disabled',false);
 	});
 
-  //Requests access to write
-  $( "#btnReleaseRight").click(function() {
-    ws.send('{ "type":"releaseRequest" }');
-    $( "#btnReleaseRight").prop('disabled',true);
-    $( "#btnRequestRight").prop('disabled',false);
-  });
+	//Release writing rights
+	$( "#btnReleaseRight").click(function() {
+		ws.send('{ "type":"releaseRequest" }');
 
+		//Update controls
+	    $("#btnReleaseRight").prop('disabled',true);
+	    $("#btnRequestRight").prop('disabled',false);
+	    $("#sharedText").prop("readOnly", true);
+	});
+}
+
+function updateCurrentWriter(str) {
+	$("#lblCurrentWriter").text("Current writer : " + str);
 }
 
 //Logs the info passed by parameter

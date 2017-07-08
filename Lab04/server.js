@@ -24,7 +24,6 @@ wss.on('connection', function (ws) {
 
   	//If a workspace connects and there's a current writer
   	if (currentWriter != null) {
-  		console.log("hihi");
 		var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[currentWriter].nickname) +' "}';
 		ws.send(data);
   	}
@@ -46,37 +45,38 @@ wss.on('connection', function (ws) {
 				writingRequest(ws.id);
 
 				if (currentWriter == ws.id) {
-					ws.send('{ "type":"hasRights" }');
-		        	var data = '{ "type":"newWriter", "nickname":"'+ crypt(ws.nickname) +' "}';
+					ws.send('{ "type":"hasRights" }');  //informs the workspace it has writing rights
+		        	var data = '{ "type":"newWriter", "nickname":"'+ crypt(ws.nickname) +' "}'; //informs other worspaces
 					broadcastToEveryoneElse(ws, data);
 				}
 				else {
 					//Send the position of the client in the FIFO to the client
-					var data = '{ "type":"positionInQueue", "position":"'+ crypt(writingFifo.indexOf(ws.id).toString())+'" }';
+					var data = '{ "type":"positionInQueue", "position":"'+ crypt((writingFifo.indexOf(ws.id) + 1).toString())+'" }';
 					ws.send(data);
 				}
 		        break;
 
 		    case 'releaseRequest':
 		    	//If currentWriter, the client at position 0 in the fifo becomes the new writer
-		    	if (currentWriter == ws.id){
-		    		console.log(typeof writingFifo[0]);
+		    	if (currentWriter == ws.id) {
 		    		if (typeof writingFifo[0] != 'undefined'){
 		    			currentWriter = writingFifo[0];
 		    			workspaces[writingFifo[0]].send('{ "type":"hasRights" }');
 		        		var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[writingFifo[0]].nickname) +' "}';
 						broadcastToEveryoneElse(workspaces[writingFifo[0]], data);
-						writingFifo.splice(0,1);
+						
+						shiftFifo(); //dequeue
 		    		}
 		    		else {
 		    			currentWriter = null;
-		    			//TO DO : JE SAIS VRAIMENT PAS SI C'EST LA MEILLEUR AFFAIRE A FAIRE LOL
-		    			var data = '{ "type":"newWriter", "nickname":"' + crypt("no one") +'"}';
+		    			var data = '{ "type":"newWriter", "nickname":"' + crypt("") +'"}';
 		    			broadcast(data);
 		    		}
 		    	}
-		    	console.log("currentWriter ds le release" + currentWriter);
-		    	removeFromFifo(ws.id);			
+		    	//Workspace just wants to leave the queue
+		    	else {
+		    		removeFromFifo(ws.id);
+		    	}
 		        break;
 	    }   
     })
@@ -114,8 +114,6 @@ function broadcast(data) {
 //Manage insertion into Fifo and sets currentWriter if empty
 function writingRequest(workspaceId) {
 	//Make sure the workspace is not already in the FIFO
-	console.log("length" + writingFifo.length);
-	console.log("currentWriter" + currentWriter);
 	if (writingFifo.indexOf(workspaceId) == -1) {
 		//Check is FIFO is empty, if so sets current writer
 		if (writingFifo.length == 0 && currentWriter == null) {
