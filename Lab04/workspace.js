@@ -2,7 +2,7 @@ const PrivateKey = 'LOG735';
 
 var ws;
 var id;
-var nickname;
+var thisNickname;
 
 //Login button click method. Sets nickname and calls connectToServer with input values
 $( "#btnLogin" ).click(function() {
@@ -10,7 +10,7 @@ $( "#btnLogin" ).click(function() {
       alert('You must enter a nickname, an IP address and a port');
   }
   else {
-    nickname = $.trim($('#txtNickname').val());
+    thisNickname = $.trim($('#txtNickname').val());
     var ipAddress = $.trim($('#txtIpAddress').val());
     var port = $.trim($('#txtPort').val());
     connectToServer(ipAddress, port, true);
@@ -34,7 +34,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 		switch(message.type) {
 		  case "idRequest":
 		    id = message.id;
-		    ws.send('{ "type":"nicknameRequest", "nickname":"' + crypt(nickname)+ '" }');
+		    ws.send('{ "type":"nicknameRequest", "nickname":"' + crypt(thisNickname)+ '" }');
 		    break;
 
 			case "newUser":
@@ -49,9 +49,13 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 			case "hasRights":
 			    document.getElementById("sharedText").readOnly = false;
-			    $("#lblCurrentWriter").text("Current writer : " + nickname);
+			    $("#lblCurrentWriter").text("Current writer : " + thisNickname);
 			    logInfo("You now have writing rights!");
 			    break;
+      case "positionInQueue":
+          position = decrypt(message.position);
+          logInfo(thisNickname + " is now position "+ position + " in fifo!");
+          break;
 
 			case "newWriter":
 			    nickname = decrypt(message.nickname);
@@ -74,7 +78,16 @@ function connectToServer(ipAddress, port, firstConnection) {
 	//Requests access to write
 	$( "#btnRequestRight").click(function() {
 		ws.send('{ "type":"writingRequest" }');
+    $( "#btnRequestRight").prop('disabled',true);
+    $( "#btnReleaseRight").prop('disabled',false);
 	});
+
+  //Requests access to write
+  $( "#btnReleaseRight").click(function() {
+    ws.send('{ "type":"releaseRequest" }');
+    $( "#btnReleaseRight").prop('disabled',true);
+    $( "#btnRequestRight").prop('disabled',false);
+  });
 
 }
 
