@@ -13,7 +13,7 @@ const Tcpp = require('tcp-ping');
 const _ = require('lodash');
 
 const PrivateKey = 'LOG735';
-const serverName = process.argv[2];
+const thisServerName = process.argv[2];
 
 var currentId = 0;
 var workspaces = {}; //contains clients websocket
@@ -28,18 +28,19 @@ var wsClient; //Client port listener
 var wsServer; //Server port listener
 
 initializeServerList();
-const clientPort = serverList[serverName].clientPort;
-const serverPort = serverList[serverName].serverPort;
+const clientPort = serverList[thisServerName].clientPort;
+const serverPort = serverList[thisServerName].serverPort;
 
 connectToExistingServers();
 
 
+//Tries to ping other servers to see if they are online, if so, connects to them
 function connectToExistingServers() {
 	var finished = _.after(Object.keys(serverList).length - 1, startServer);
 
 	Object.keys(serverList).map(function(objectKey, index) {
 	    var value = serverList[objectKey];
-	    if (serverName !== value.serverName) {
+	    if (thisServerName !== value.serverName) {
 			Tcpp.probe(value.ip, value.serverPort, function(err, available) {
 			    if (available) {
 			    	serversConnectedTo[value.serverName]  = new WebSocket('ws://'+value.ip + ':' + value.serverPort);
@@ -51,6 +52,7 @@ function connectToExistingServers() {
 	});	
 }
 
+//Starts the server and check if he's the main
 function startServer() {
 	if (Object.keys(serversConnectedTo).length == 0) {
 		isMain = true;
@@ -67,6 +69,60 @@ function startServer() {
 	setServerListeners();
 }
 
+
+//Server port listener
+function setServerListeners() {
+	wsServer.on('connection', function connection(ws) {
+
+		ws.on('message', function incoming(str) {
+			var object = JSON.parse(str);
+		    switch(object.type) {
+		    	//When a server connects to another server
+			    case 'newClientServer':
+			    	ws.serverName = object.serverName;
+					serverConnections[object.serverName] = ws;
+					console.log("new server connected to me : " + object.serverName);
+
+					if (isMain) {
+						syncFifo();
+						syncText();
+					}					
+			        break;
+			}
+		});
+
+		//When a server is closed, inform other workspaces
+	    ws.on("close", function() {
+	    	console.log(ws.serverName + " just closed");
+	    	delete serverConnections[ws.serverName]; //removes the closed server from the list
+	    })
+	});
+}
+
+//When a server is client to another server.
+function setClientServerListeners(serverName) {
+	serversConnectedTo[serverName].onopen = function(event) {
+		//Tell other servers i'm connected to them
+		serversConnectedTo[serverName].send('{ "type":"newClientServer", "serverName":"'+thisServerName+'" }');
+	};
+
+	serversConnectedTo[serverName].onmessage = function(event) { 
+		var message = JSON.parse(event.data);
+
+		switch(message.type) {
+			case "syncFifo":
+		    	currentWriter = message.currentWriter;
+		    	writingFifo = message.currentFifo;
+		    break;
+
+		    case "syncText":
+		    	sharedText = message.currentText;
+		    break;
+		}
+	};
+}
+
+//Sets all the client listeners
 function setClientListeners() {
 	//Called when a workspace connects to the server
 	wsClient.on('connection', function (ws) {
@@ -98,7 +154,7 @@ function setClientListeners() {
 			    case 'nicknameRequest':
 					workspaces[ws.id.toString()].nickname = decrypt(object.nickname); //Saves nickname
 			        var data = '{ "type":"newUser", "nickname":"'+ object.nickname +' "}';
-			        broadcastToEveryoneElse(ws, data);
+			        broadcastToClientsExeptSender(ws, data);
 			        break;
 
 			    case 'writingRequest':
@@ -107,7 +163,7 @@ function setClientListeners() {
 					if (currentWriter == ws.id) {
 						ws.send('{ "type":"hasRights" }');  //informs the workspace it has writing rights
 			        	var data = '{ "type":"newWriter", "nickname":"'+ crypt(ws.nickname) +' "}'; //informs other workspaces
-						broadcastToEveryoneElse(ws, data);
+						broadcastToClientsExeptSender(ws, data);
 					}
 					else {
 						//Send the position of the client in the FIFO to the client
@@ -132,20 +188,16 @@ function setClientListeners() {
 			    		ws.send('{ "type":"leftQueue" }');
 			    	}
 
-			    	//send updated text to other workspaces
-			    	var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
-			    	broadcastToEveryoneElse(ws, data);
+			    	updateSharedText(ws);
 			        break;
 
 			    case 'updateSharedText':
 			    	if (currentWriter == ws.id) {
 			    		var newText = decrypt(object.sharedText);
 			    		sharedText = newText; //Update the new text
+			    		
+			    		updateSharedText(ws);
 			    	}
-
-			    	//send updated text to other workspaces
-			    	var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
-			    	broadcastToEveryoneElse(ws, data);
 			    	break;
 		    }   
 	    })
@@ -153,7 +205,7 @@ function setClientListeners() {
 	  	//When a client is closed, inform other workspaces
 	    ws.on("close", function() {
 	    	var data = '{ "type":"userLeft", "nickname":"'+ crypt(ws.nickname) +' "}';
-	    	broadcastToEveryoneElse(ws, data);
+	    	broadcastToClientsExeptSender(ws, data);
 
 	    	//If the closed workspce was in queue, proceed to removed it from the the queue and update queue positions
 	    	var currentPosition =  getPositionInQueue(ws.id);
@@ -167,24 +219,10 @@ function setClientListeners() {
 	    	}
 
 	    	delete workspaces[ws.id.toString()]; //removes the closed workspace from the list
-	    	//workspaces.splice(workspaces.indexOf(ws.id), 1); 
 	    })
 	});
 }
 
-function setServerListeners() {
-	wsServer.on('connection', function connection(ws) {
-		ws.on('message', function incoming(message) {
-			console.log('received: %s', message);
-		});
-	});
-}
-
-function setClientServerListeners(serverName) {
-	serversConnectedTo[serverName].on('open', function open() {
-		serversConnectedTo[serverName].send('oki');
-	});
-}
 
 //Simply initialize the array with other servers info
 function initializeServerList() {
@@ -193,8 +231,8 @@ function initializeServerList() {
 	serverList["server3"] = {"serverName":"server3", "ip":"127.0.0.1", "clientPort":"8084", "serverPort":"8085"};
 }
 
-//broadcasts a message to everyone except the sender
-function broadcastToEveryoneElse(ws, data) {
+//Broadcasts a message to everyone in a group except the sender
+function broadcastToClientsExeptSender(ws, data) {
 	//Broadcast to other workspaces
 	wsClient.clients.forEach(function each(client) {
 		if (client !== ws && client.readyState === 1) {
@@ -204,13 +242,48 @@ function broadcastToEveryoneElse(ws, data) {
 }
 
 //broadcasts a message to everyoneS
-function broadcast(data) {
+function broadcastToEveryClient(data) {
 	//Broadcast to other workspaces
 	wsClient.clients.forEach(function each(client) {
 		if (client.readyState === 1) {
 	    	client.send(data);
 		}
 	});
+}
+
+function broadcastToServers(data) {
+	//Broadcast to other servers
+	wsServer.clients.forEach(function each(client) {
+		if (client.readyState === 1) {
+	    	client.send(data, function ack(error) {
+				if (typeof error != 'undefined') {
+					console.log("erreur dans la synchro");
+					//todo je sais pas comment faire l'erreur
+				}
+				else {
+					console.log("Synchro avec "+client.serverName+" réussie");
+				}
+			});
+		}
+	});
+}
+
+function syncFifo() {
+	var data = '{ "type":"syncFifo", "currentWriter":"'+currentWriter+'", "currentFifo":"'+writingFifo+'" }';
+	broadcastToServers(data);
+}
+
+function syncText() {
+	var data = '{ "type":"syncText", "currentText":"'+sharedText+'" }';
+	broadcastToServers(data);
+}
+
+function updateSharedText(ws) {
+	syncText();
+
+	//send updated text to other workspaces
+	var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
+	broadcastToClientsExeptSender(ws, data);
 }
 
 //Manage insertion into Fifo and sets currentWriter if empty
@@ -224,6 +297,8 @@ function writingRequest(workspaceId) {
 		else {
 			writingFifo.push(workspaceId);
 		}
+
+		syncFifo();
 	}
 }
 
@@ -232,6 +307,7 @@ function removeFromFifo(workspaceId) {
 	var index = checkIfInQueue(workspaceId);
 	if (index != -1) {
 	    writingFifo.splice(index, 1);
+	    syncFifo();
 	}
 }
 
@@ -273,7 +349,7 @@ function assignNextWriter(ws) {
 		currentWriter = writingFifo[0];
 		workspaces[currentWriter.toString()].send('{ "type":"hasRights" }');
 		var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[currentWriter.toString()].nickname) +' "}';
-		broadcastToEveryoneElse(workspaces[currentWriter.toString()], data);
+		broadcastToClientsExeptSender(workspaces[currentWriter.toString()], data);
 
 		shiftFifo(); //dequeue
 		updateQueuePosition(ws, 0); //When the first one in queue is removed, everyone's position is updated
@@ -281,8 +357,10 @@ function assignNextWriter(ws) {
 	else {
 		currentWriter = null;
 		var data = '{ "type":"newWriter", "nickname":"' + crypt("") +'"}';
-		broadcast(data);
-	}	
+		broadcastToEveryClient(data);
+	}
+
+	syncFifo();	
 }
 
 //Returns a crypted object
