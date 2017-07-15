@@ -84,6 +84,7 @@ function setServerListeners() {
 					if (isMain) {
 						syncFifo();
 						syncText();
+						syncCurrentId();
 					}
 
 					sendServerInfoToClients(object.serverName);					
