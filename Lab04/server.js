@@ -22,10 +22,11 @@ var serverConnections = {}; //contains servers websocket
 var serversConnectedTo = {}; //contains servers it's connected to
 var isMain = false;
 var sharedText = '';
-var currentWriter = null;
+var currentWriter = -1;
 var writingFifo = [];
 var wsClient; //Client port listener
 var wsServer; //Server port listener
+var mainServerFailed = false;
 
 initializeServerList();
 const clientPort = serverList[thisServerName].clientPort;
@@ -43,7 +44,8 @@ function connectToExistingServers() {
 	    if (thisServerName !== value.serverName) {
 			Tcpp.probe(value.ip, value.serverPort, function(err, available) {
 			    if (available) {
-			    	serversConnectedTo[value.serverName]  = new WebSocket('ws://'+value.ip + ':' + value.serverPort);
+			    	serversConnectedTo[value.serverName] = new WebSocket('ws://'+value.ip + ':' + value.serverPort);
+			    	serversConnectedTo[value.serverName].serverName = value.serverName;
 			    	setClientServerListeners(value.serverName);
 			    }
 				finished();
@@ -54,9 +56,7 @@ function connectToExistingServers() {
 
 //Starts the server and check if he's the main
 function startServer() {
-	if (Object.keys(serversConnectedTo).length == 0) {
-		isMain = true;
-	}
+	setMain();
 
 	console.log(isMain);
 
@@ -73,7 +73,6 @@ function startServer() {
 //Server port listener
 function setServerListeners() {
 	wsServer.on('connection', function connection(ws) {
-
 		ws.on('message', function incoming(str) {
 			var object = JSON.parse(str);
 		    switch(object.type) {
@@ -86,7 +85,9 @@ function setServerListeners() {
 					if (isMain) {
 						syncFifo();
 						syncText();
-					}					
+					}
+
+					sendServerInfoToClients(object.serverName);					
 			        break;
 			}
 		});
@@ -95,6 +96,7 @@ function setServerListeners() {
 	    ws.on("close", function() {
 	    	console.log(ws.serverName + " just closed");
 	    	delete serverConnections[ws.serverName]; //removes the closed server from the list
+	    	sendServerRemoveToClients(ws.serverName);
 	    })
 	});
 }
@@ -112,13 +114,28 @@ function setClientServerListeners(serverName) {
 		switch(message.type) {
 			case "syncFifo":
 		    	currentWriter = message.currentWriter;
-		    	writingFifo = message.currentFifo;
+		    	writingFifo = JSON.parse(message.currentFifo);
+
+		    	console.log(writingFifo);
 		    break;
 
 		    case "syncText":
 		    	sharedText = message.currentText;
 		    break;
+
+		    case "syncCurrentId":
+		    	currentId = message.currentId;
+		    break;
 		}
+	};
+
+	//Triggered when the server is closed
+	serversConnectedTo[serverName].onclose = function (event) {
+		delete serversConnectedTo[serverName];
+
+		setMain();
+		mainServerFailed = true;
+		console.log(isMain);
 	};
 }
 
@@ -126,103 +143,122 @@ function setClientServerListeners(serverName) {
 function setClientListeners() {
 	//Called when a workspace connects to the server
 	wsClient.on('connection', function (ws) {
-	  	console.log("Browser connected online...");
-	  	//A new workspace connects and requests and ID from the server
-	  	ws.id = currentId;
-	  	workspaces[ws.id.toString()] = ws;
-	  	ws.send('{ "type":"idRequest", "id":"'+ crypt(currentId.toString()) +' "}'); //Informs the workspace of his ID
-	  	currentId++;
+	  	if (isMain) {
+	  		console.log("Browser connected online...");
+	  		//When a workspace sends a message to the server
+		  	ws.on("message", function (str) {
+			    var object = JSON.parse(str);
 
-	  	//If a workspace connects and there's a current writer
-	  	if (currentWriter != null) {
-			var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[currentWriter.toString()].nickname) +' "}';
-			ws.send(data);
-	  	}
+			    switch(object.type) {
+			    	//Sets the nickname for the workspace
+				    case 'connectionRequest':
+			    		//A new workspace connects and requests an ID from the server
+				    	workspaceId = parseInt(decrypt(object.id));
+					  	ws.id = workspaceId == -1 ? currentId : workspaceId;
+					  	workspaces[ws.id.toString()] = ws;
+					  	ws.send('{ "type":"idRequest", "id":"'+ crypt(ws.id.toString()) +' "}'); //Informs the workspace of his ID
+					  	currentId++;
+					  	syncCurrentId();
 
-	  	//If a workspace joins and the text is not empty
-	  	if (sharedText != '') {
-	  		var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
-	  		ws.send(data);
-	  	}
+						workspaces[ws.id.toString()].nickname = decrypt(object.nickname); //Saves nickname
+				        var data = '{ "type":"newUser", "nickname":"'+ object.nickname +' "}';
 
-	    //When a workspace sends a message to the server
-	  	ws.on("message", function (str) {
-		    var object = JSON.parse(str);
+				        //only if it's a new workspace
+				        if (workspaceId == -1) {
+				        	broadcastToClientsExeptSender(ws, data);
 
-		    switch(object.type) {
-		    	//Sets the nickname for the workspace
-			    case 'nicknameRequest':
-					workspaces[ws.id.toString()].nickname = decrypt(object.nickname); //Saves nickname
-			        var data = '{ "type":"newUser", "nickname":"'+ object.nickname +' "}';
-			        broadcastToClientsExeptSender(ws, data);
-			        break;
+				        	//If a workspace connects and there's a current writer
+						  	if (currentWriter != -1 && typeof workspaces[currentWriter.toString()] != 'undefined') {
+								var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[currentWriter.toString()].nickname) +' "}';
+								ws.send(data);
+						  	}
 
-			    case 'writingRequest':
-					writingRequest(ws.id);
+						  	//If a workspace joins and the text is not empty
+						  	if (sharedText != '') {
+						  		var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
+						  		ws.send(data);
+						  	}
 
-					if (currentWriter == ws.id) {
-						ws.send('{ "type":"hasRights" }');  //informs the workspace it has writing rights
-			        	var data = '{ "type":"newWriter", "nickname":"'+ crypt(ws.nickname) +' "}'; //informs other workspaces
-						broadcastToClientsExeptSender(ws, data);
-					}
-					else {
-						//Send the position of the client in the FIFO to the client
-						var data = '{ "type":"positionInQueue", "position":"'+ crypt((getPositionInQueue(ws.id)).toString())+'" }';
-						ws.send(data);
-					}
-			        break;
+						  	//If there are redundant servers online
+						  	if (Object.keys(serverConnections).length != 0)  {
+						  		Object.keys(serverConnections).map(function(objectKey, index) {
+								    var value = serverConnections[objectKey];
+								    sendServerInfoToClient(ws, value.serverName);
+								});	
+						  	}
+				        }			    	
+			        	break;
 
-			    case 'releaseRequest':
-			    	//If currentWriter, the client at position 0 in the fifo becomes the new writer
-			    	if (currentWriter == ws.id) {
-			    		var newText = decrypt(object.sharedText);
-			    		sharedText = newText; //Update the new text
+				    case 'writingRequest':
+						writingRequest(ws.id);
 
-			    		assignNextWriter(ws);		    		
-			    	}
-			    	//Workspace just wants to leave the queue
-			    	else {
-			    		var currentPosition =  getPositionInQueue(ws.id);
-			    		removeFromFifo(ws.id);
-			    		updateQueuePosition(ws, currentPosition); //When someone leaves the queue, only the ones after him have to be updated
-			    		ws.send('{ "type":"leftQueue" }');
-			    	}
+						if (currentWriter == ws.id) {
+							ws.send('{ "type":"hasRights" }');  //informs the workspace it has writing rights
+				        	var data = '{ "type":"newWriter", "nickname":"'+ crypt(ws.nickname) +' "}'; //informs other workspaces
+							broadcastToClientsExeptSender(ws, data);
+						}
+						else {
+							//Send the position of the client in the FIFO to the client
+							var data = '{ "type":"positionInQueue", "position":"'+ crypt((getPositionInQueue(ws.id)).toString())+'" }';
+							ws.send(data);
+						}
+				        break;
 
-			    	updateSharedText(ws);
-			        break;
+				    case 'releaseRequest':
+				    	//If currentWriter, the client at position 0 in the fifo becomes the new writer
+				    	if (currentWriter == ws.id) {
+				    		var newText = decrypt(object.sharedText);
+				    		sharedText = newText; //Update the new text
 
-			    case 'updateSharedText':
-			    	if (currentWriter == ws.id) {
-			    		var newText = decrypt(object.sharedText);
-			    		sharedText = newText; //Update the new text
-			    		
-			    		updateSharedText(ws);
-			    	}
-			    	break;
-		    }   
-	    })
+				    		assignNextWriter(ws);		    		
+				    	}
+				    	//Workspace just wants to leave the queue
+				    	else {
+				    		var currentPosition =  getPositionInQueue(ws.id);
+				    		removeFromFifo(ws.id);
+				    		updateQueuePosition(ws, currentPosition); //When someone leaves the queue, only the ones after him have to be updated
+				    		ws.send('{ "type":"leftQueue" }');
+				    	}
 
-	  	//When a client is closed, inform other workspaces
-	    ws.on("close", function() {
-	    	var data = '{ "type":"userLeft", "nickname":"'+ crypt(ws.nickname) +' "}';
-	    	broadcastToClientsExeptSender(ws, data);
+				    	updateSharedText(ws);
+				        break;
 
-	    	//If the closed workspce was in queue, proceed to removed it from the the queue and update queue positions
-	    	var currentPosition =  getPositionInQueue(ws.id);
-	    	if (currentPosition > 0) {
-	    		removeFromFifo(ws.id); //removes from fifo
-				updateQueuePosition(ws, currentPosition); //When someone leaves the queue, only the ones after him have to be updated
-	    	} 
-	    	//If the closed workspace is the one with the token
-	    	else if (currentWriter == ws.id) {
-	    		assignNextWriter(ws);
-	    	}
+				    case 'updateSharedText':
+				    	if (currentWriter == ws.id) {
+				    		var newText = decrypt(object.sharedText);
+				    		sharedText = newText; //Update the new text
+				    		
+				    		updateSharedText(ws);
+				    	}
+				    	break;
+			    }   
+		    });
 
-	    	delete workspaces[ws.id.toString()]; //removes the closed workspace from the list
-	    })
+		  	//When a client is closed, inform other workspaces
+		    ws.on("close", function() {
+		    	var data = '{ "type":"userLeft", "nickname":"'+ crypt(ws.nickname) +' "}';
+		    	broadcastToClientsExeptSender(ws, data);
+
+		    	//If the closed workspce was in queue, proceed to removed it from the the queue and update queue positions
+		    	var currentPosition =  getPositionInQueue(ws.id);
+		    	if (currentPosition > 0) {
+		    		removeFromFifo(ws.id); //removes from fifo
+					updateQueuePosition(ws, currentPosition); //When someone leaves the queue, only the ones after him have to be updated
+		    	} 
+		    	//If the closed workspace is the one with the token
+		    	else if (currentWriter == ws.id) {
+		    		assignNextWriter(ws);
+		    	}
+
+		    	delete workspaces[ws.id.toString()]; //removes the closed workspace from the list
+		    });
+	  	}	
+	  	else {
+	  		redirectClient(ws);	
+	  		ws.close();
+	  	} 	 
 	});
 }
-
 
 //Simply initialize the array with other servers info
 function initializeServerList() {
@@ -268,14 +304,31 @@ function broadcastToServers(data) {
 	});
 }
 
+function redirectClient(ws) {
+	var value = serversConnectedTo[Object.keys(serversConnectedTo)[0]];
+	var data = '{ "type":"redirect", "serverName":"'+crypt(value.serverName)+'", "ip":"'+crypt(serverList[value.serverName].ip)+'", "port":"'+crypt(serverList[value.serverName].clientPort)+'" }';
+	ws.send(data);
+}
+
 function syncFifo() {
-	var data = '{ "type":"syncFifo", "currentWriter":"'+currentWriter+'", "currentFifo":"'+writingFifo+'" }';
+	var data = '{ "type":"syncFifo", "currentWriter":"'+currentWriter+'", "currentFifo":"'+JSON.stringify(writingFifo)+'" }';
 	broadcastToServers(data);
 }
 
 function syncText() {
 	var data = '{ "type":"syncText", "currentText":"'+sharedText+'" }';
 	broadcastToServers(data);
+}
+
+function syncCurrentId() {
+	var data = '{ "type":"syncCurrentId", "currentId":"'+currentId+'" }';
+	broadcastToServers(data);
+}
+
+function setMain() {
+	if (Object.keys(serversConnectedTo).length == 0) {
+		isMain = true;
+	}
 }
 
 function updateSharedText(ws) {
@@ -286,12 +339,28 @@ function updateSharedText(ws) {
 	broadcastToClientsExeptSender(ws, data);
 }
 
+function sendServerInfoToClients(serverName) {
+	var data = '{ "type":"newServer", "serverName":"'+crypt(serverName)+'", "ip":"'+crypt(serverList[serverName].ip)+'", "port":"'+crypt(serverList[serverName].clientPort)+'" }';
+	broadcastToEveryClient(data);
+}
+
+function sendServerInfoToClient(ws, serverName) {
+	var data = '{ "type":"newServer", "serverName":"'+crypt(serverName)+'", "ip":"'+crypt(serverList[serverName].ip)+'", "port":"'+crypt(serverList[serverName].clientPort)+'" }';
+	ws.send(data);
+}
+
+
+function sendServerRemoveToClients(serverName) {
+	var data = '{ "type":"serverRemove", "serverName":"'+crypt(serverName)+'" }';
+	broadcastToEveryClient(data);
+}
+
 //Manage insertion into Fifo and sets currentWriter if empty
 function writingRequest(workspaceId) {
 	//Make sure the workspace is not already in the FIFO
 	if (checkIfInQueue(workspaceId) == -1) {
 		//Check is FIFO is empty, if so sets current writer
-		if (writingFifo.length == 0 && currentWriter == null) {
+		if (writingFifo.length == 0 && currentWriter == -1) {
 			currentWriter = workspaceId;
 		}
 		else {
@@ -355,7 +424,7 @@ function assignNextWriter(ws) {
 		updateQueuePosition(ws, 0); //When the first one in queue is removed, everyone's position is updated
 	}
 	else {
-		currentWriter = null;
+		currentWriter = -1;
 		var data = '{ "type":"newWriter", "nickname":"' + crypt("") +'"}';
 		broadcastToEveryClient(data);
 	}

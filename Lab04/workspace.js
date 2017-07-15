@@ -8,9 +8,10 @@
 const PrivateKey = 'LOG735';
 
 var ws;
-var id;
+var id = -1;
 var thisNickname;
 var periodicCall;
+var otherServers = {};
 
 //Login button click method. Sets nickname and calls connectToServer with input values
 $( "#btnLogin" ).click(function() {
@@ -34,7 +35,29 @@ function connectToServer(ipAddress, port, firstConnection) {
 		if (firstConnection) {
 		 	$("#msgLoginSuccess").css("display", "").delay(5000).fadeOut(400);
     		$("#btnLogin").prop("disabled", true);
+
+    		//Requests access to write
+			$("#btnRequestRight").click(function() {
+				ws.send('{ "type":"writingRequest" }');
+
+				//Update controls
+			    $("#btnRequestRight").prop('disabled',true);
+			    $("#btnReleaseRight").prop('disabled',false);
+			});
+
+			//Release writing rights
+			$( "#btnReleaseRight").click(function() {
+				ws.send('{ "type":"releaseRequest", "sharedText":"'+ crypt($("#sharedText").val()) +'" }');
+
+				//Update controls
+			    $("#btnReleaseRight").prop('disabled',true);
+			    $("#btnRequestRight").prop('disabled',false);
+			    $("#sharedText").prop("readOnly", true);
+
+			    clearInterval(periodicCall); //stop periodically calling server to save text
+			});
 		}
+		ws.send('{ "type":"connectionRequest", "id":"'+crypt(id.toString())+'", "nickname":"'+ crypt(thisNickname)+'" }')
 	};
 
 	ws.onmessage = function(event) { 
@@ -42,8 +65,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 		switch(message.type) {
 			case "idRequest":
-		    	id = message.id;
-		    	ws.send('{ "type":"nicknameRequest", "nickname":"' + crypt(thisNickname)+ '" }');
+		    	id = decrypt(message.id);
 		    break;
 
 		    //Notices the workspace when a new user connects
@@ -103,6 +125,26 @@ function connectToServer(ipAddress, port, firstConnection) {
 		    case "updateSharedText":
 		    	$("#sharedText").val(decrypt(message.newText));
 		    	break;
+
+		    case "newServer":
+		    	var serverName = decrypt(message.serverName);
+	    		var ip = decrypt(message.ip);
+	    		var port = decrypt(message.port);
+	    		addNewServer(serverName, ip, port);
+		    	console.log(otherServers);
+		    	break;
+
+		    case "serverRemove":
+		    	delete otherServers[decrypt(message.serverName)];
+		    	console.log(otherServers);
+		    	break;
+
+	    	case "redirect":
+	    		var serverName = decrypt(message.serverName);
+	    		var ip = decrypt(message.ip);
+	    		var port = decrypt(message.port);
+	    		addNewServer(serverName, ip, port);
+	    		break;
 		}
 	};
 
@@ -116,28 +158,20 @@ function connectToServer(ipAddress, port, firstConnection) {
 	//Triggered when the server is closed
 	ws.onclose = function (event) {
 		console.log("serveur fermé");
+		if (Object.keys(otherServers).length != 0) {
+			var value = otherServers[Object.keys(otherServers)[0]];
+		    delete otherServers[Object.keys(otherServers)[0]];	  
+			connectToServer(value.ip, value.port, false);				
+		}
+		else {
+			console.log("catastrophe");
+		}
 	};
+}
 
-	//Requests access to write
-	$("#btnRequestRight").click(function() {
-		ws.send('{ "type":"writingRequest" }');
 
-		//Update controls
-	    $("#btnRequestRight").prop('disabled',true);
-	    $("#btnReleaseRight").prop('disabled',false);
-	});
-
-	//Release writing rights
-	$( "#btnReleaseRight").click(function() {
-		ws.send('{ "type":"releaseRequest", "sharedText":"'+ crypt($("#sharedText").val()) +'" }');
-
-		//Update controls
-	    $("#btnReleaseRight").prop('disabled',true);
-	    $("#btnRequestRight").prop('disabled',false);
-	    $("#sharedText").prop("readOnly", true);
-
-	    clearInterval(periodicCall); //stop periodically calling server to save text
-	});
+function addNewServer(serverName, ip, port) {
+	otherServers[serverName] = { "ip":ip, "port":port };
 }
 
 //Updates the label showing the current writer
