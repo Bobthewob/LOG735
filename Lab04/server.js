@@ -26,7 +26,6 @@ var currentWriter = -1;
 var writingFifo = [];
 var wsClient; //Client port listener
 var wsServer; //Server port listener
-var mainServerFailed = false;
 
 initializeServerList();
 const clientPort = serverList[thisServerName].clientPort;
@@ -134,7 +133,6 @@ function setClientServerListeners(serverName) {
 		delete serversConnectedTo[serverName];
 
 		setMain();
-		mainServerFailed = true;
 		console.log(isMain);
 	};
 }
