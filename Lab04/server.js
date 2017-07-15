@@ -119,7 +119,7 @@ function setClientServerListeners(serverName) {
 		    break;
 
 		    case "syncText":
-		    	sharedText = message.currentText;
+		    	sharedText = decrypt(message.currentText);
 		    break;
 
 		    case "syncCurrentId":
@@ -314,7 +314,7 @@ function syncFifo() {
 }
 
 function syncText() {
-	var data = '{ "type":"syncText", "currentText":"'+sharedText+'" }';
+	var data = '{ "type":"syncText", "currentText":"'+crypt(sharedText)+'" }';
 	broadcastToServers(data);
 }
 
