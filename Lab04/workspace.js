@@ -5,7 +5,6 @@
  *                Joey Roger ROGJ13039302
  *                Catherine Boivin BOIC19518909
  *******************************************************/
-const PrivateKey = 'LOG735';
 
 var ws;
 var id = -1;
@@ -47,7 +46,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 			//Release writing rights
 			$( "#btnReleaseRight").click(function() {
-				ws.send('{ "type":"releaseRequest", "sharedText":"'+ crypt($("#sharedText").val()) +'" }');
+				ws.send('{ "type":"releaseRequest", "sharedText":"'+ CryptoHelper.crypt($("#sharedText").val()) +'" }');
 
 				//Update controls
 			    $("#btnReleaseRight").prop('disabled',true);
@@ -57,7 +56,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 			    clearInterval(periodicCall); //stop periodically calling server to save text
 			});
 		}
-		ws.send('{ "type":"connectionRequest", "id":"'+crypt(id.toString())+'", "nickname":"'+ crypt(thisNickname)+'" }')
+		ws.send('{ "type":"connectionRequest", "id":"'+CryptoHelper.crypt(id.toString())+'", "nickname":"'+ CryptoHelper.crypt(thisNickname)+'" }')
 	};
 
 	ws.onmessage = function(event) { 
@@ -65,18 +64,18 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 		switch(message.type) {
 			case "idRequest":
-		    	id = decrypt(message.id);
+		    	id = CryptoHelper.decrypt(message.id);
 		    break;
 
 		    //Notices the workspace when a new user connects
 			case "newUser":
-			    nickname = decrypt(message.nickname);
+			    nickname = CryptoHelper.decrypt(message.nickname);
 			    logInfo(nickname + " has joined the session.");
 			    break;
 
 			//Notices the workspace when a user leaves the session
 			case "userLeft":
-			    nickname = decrypt(message.nickname);
+			    nickname = CryptoHelper.decrypt(message.nickname);
 			    logInfo(nickname + " has left the session.");
 			    break;
 
@@ -86,7 +85,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 			    logInfo("You now have writing rights!");
 
 			    periodicCall = setInterval(function(){
-			    	ws.send('{ "type":"updateSharedText", "sharedText":"'+ crypt($("#sharedText").val()) +'" }');
+			    	ws.send('{ "type":"updateSharedText", "sharedText":"'+ CryptoHelper.crypt($("#sharedText").val()) +'" }');
 			    }, 5000);
 
 			    $("#sharedText").prop("readOnly", false);
@@ -96,7 +95,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 			//Notices the workspace when their position in queue changed
 	     	case "positionInQueue":
-	        	position = decrypt(message.position);
+	        	position = CryptoHelper.decrypt(message.position);
 	        	logInfo("You are now position "+ position + " in queue!");
 
 			    $("#btnReleaseRight").val("Leave queue");
@@ -104,7 +103,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 	        //Notices the workspaces when there's a new writer
 			case "newWriter":
-			    nickname = decrypt(message.nickname);
+			    nickname = CryptoHelper.decrypt(message.nickname);
 
 			    if (nickname == '') {
 					logInfo("The queue is now empty.");
@@ -123,26 +122,26 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 		    //Updates the shared text
 		    case "updateSharedText":
-		    	$("#sharedText").val(decrypt(message.newText));
+		    	$("#sharedText").val(CryptoHelper.decrypt(message.newText));
 		    	break;
 
 		    case "newServer":
-		    	var serverName = decrypt(message.serverName);
-	    		var ip = decrypt(message.ip);
-	    		var port = decrypt(message.port);
+		    	var serverName = CryptoHelper.decrypt(message.serverName);
+	    		var ip = CryptoHelper.decrypt(message.ip);
+	    		var port = CryptoHelper.decrypt(message.port);
 	    		addNewServer(serverName, ip, port);
 		    	console.log(otherServers);
 		    	break;
 
 		    case "serverRemove":
-		    	delete otherServers[decrypt(message.serverName)];
+		    	delete otherServers[CryptoHelper.decrypt(message.serverName)];
 		    	console.log(otherServers);
 		    	break;
 
 	    	case "redirect":
-	    		var serverName = decrypt(message.serverName);
-	    		var ip = decrypt(message.ip);
-	    		var port = decrypt(message.port);
+	    		var serverName = CryptoHelper.decrypt(message.serverName);
+	    		var ip = CryptoHelper.decrypt(message.ip);
+	    		var port = CryptoHelper.decrypt(message.port);
 	    		addNewServer(serverName, ip, port);
 	    		break;
 		}
@@ -182,15 +181,4 @@ function updateCurrentWriter(str) {
 //Logs the info passed by parameter
 function logInfo(info) {
 	document.getElementById("txtLog").value += info + "\n";
-}
-
-//Returns a crypted object
-function crypt(object) {
-	return CryptoJS.AES.encrypt(object, PrivateKey);
-}
-
-//Returns a decrypted object
-function decrypt(object) {
-	var bytes  = CryptoJS.AES.decrypt(object.toString(), PrivateKey);
-	return bytes.toString(CryptoJS.enc.Utf8);
 }

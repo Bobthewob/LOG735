@@ -8,11 +8,10 @@
 
 //Server initialisation
 const WebSocket = require("ws");
-const CryptoJS = require("crypto-js");
 const Tcpp = require('tcp-ping');
 const _ = require('lodash');
+const CryptoHelper = require('./cryptoHelper.js');
 
-const PrivateKey = 'LOG735';
 const thisServerName = process.argv[2];
 
 var currentId = 0;
@@ -120,7 +119,7 @@ function setClientServerListeners(serverName) {
 		    break;
 
 		    case "syncText":
-		    	sharedText = decrypt(message.currentText);
+		    	sharedText = CryptoHelper.decrypt(message.currentText);
 		    break;
 
 		    case "syncCurrentId":
@@ -152,14 +151,14 @@ function setClientListeners() {
 			    	//Sets the nickname for the workspace
 				    case 'connectionRequest':
 			    		//A new workspace connects and requests an ID from the server
-				    	workspaceId = parseInt(decrypt(object.id));
+				    	workspaceId = parseInt(CryptoHelper.decrypt(object.id));
 					  	ws.id = workspaceId == -1 ? currentId : workspaceId;
 					  	workspaces[ws.id.toString()] = ws;
-					  	ws.send('{ "type":"idRequest", "id":"'+ crypt(ws.id.toString()) +' "}'); //Informs the workspace of his ID
+					  	ws.send('{ "type":"idRequest", "id":"'+ CryptoHelper.crypt(ws.id.toString()) +' "}'); //Informs the workspace of his ID
 					  	currentId++;
 					  	syncCurrentId();
 
-						workspaces[ws.id.toString()].nickname = decrypt(object.nickname); //Saves nickname
+						workspaces[ws.id.toString()].nickname = CryptoHelper.decrypt(object.nickname); //Saves nickname
 				        var data = '{ "type":"newUser", "nickname":"'+ object.nickname +' "}';
 
 				        //only if it's a new workspace
@@ -168,13 +167,13 @@ function setClientListeners() {
 
 				        	//If a workspace connects and there's a current writer
 						  	if (currentWriter != -1 && typeof workspaces[currentWriter.toString()] != 'undefined') {
-								var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[currentWriter.toString()].nickname) +' "}';
+								var data = '{ "type":"newWriter", "nickname":"'+ CryptoHelper.crypt(workspaces[currentWriter.toString()].nickname) +' "}';
 								ws.send(data);
 						  	}
 
 						  	//If a workspace joins and the text is not empty
 						  	if (sharedText != '') {
-						  		var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
+						  		var data = '{ "type":"updateSharedText", "newText":"'+ CryptoHelper.crypt(sharedText) +' "}';
 						  		ws.send(data);
 						  	}
 
@@ -193,12 +192,12 @@ function setClientListeners() {
 
 						if (currentWriter == ws.id) {
 							ws.send('{ "type":"hasRights" }');  //informs the workspace it has writing rights
-				        	var data = '{ "type":"newWriter", "nickname":"'+ crypt(ws.nickname) +' "}'; //informs other workspaces
+				        	var data = '{ "type":"newWriter", "nickname":"'+ CryptoHelper.crypt(ws.nickname) +' "}'; //informs other workspaces
 							broadcastToClientsExeptSender(ws, data);
 						}
 						else {
 							//Send the position of the client in the FIFO to the client
-							var data = '{ "type":"positionInQueue", "position":"'+ crypt((getPositionInQueue(ws.id)).toString())+'" }';
+							var data = '{ "type":"positionInQueue", "position":"'+ CryptoHelper.crypt((getPositionInQueue(ws.id)).toString())+'" }';
 							ws.send(data);
 						}
 				        break;
@@ -206,7 +205,7 @@ function setClientListeners() {
 				    case 'releaseRequest':
 				    	//If currentWriter, the client at position 0 in the fifo becomes the new writer
 				    	if (currentWriter == ws.id) {
-				    		var newText = decrypt(object.sharedText);
+				    		var newText = CryptoHelper.decrypt(object.sharedText);
 				    		sharedText = newText; //Update the new text
 
 				    		assignNextWriter(ws);		    		
@@ -224,7 +223,7 @@ function setClientListeners() {
 
 				    case 'updateSharedText':
 				    	if (currentWriter == ws.id) {
-				    		var newText = decrypt(object.sharedText);
+				    		var newText = CryptoHelper.decrypt(object.sharedText);
 				    		sharedText = newText; //Update the new text
 				    		
 				    		updateSharedText(ws);
@@ -235,7 +234,7 @@ function setClientListeners() {
 
 		  	//When a client is closed, inform other workspaces
 		    ws.on("close", function() {
-		    	var data = '{ "type":"userLeft", "nickname":"'+ crypt(ws.nickname) +' "}';
+		    	var data = '{ "type":"userLeft", "nickname":"'+ CryptoHelper.crypt(ws.nickname) +' "}';
 		    	broadcastToClientsExeptSender(ws, data);
 
 		    	//If the closed workspce was in queue, proceed to removed it from the the queue and update queue positions
@@ -305,7 +304,7 @@ function broadcastToServers(data) {
 
 function redirectClient(ws) {
 	var value = serversConnectedTo[Object.keys(serversConnectedTo)[0]];
-	var data = '{ "type":"redirect", "serverName":"'+crypt(value.serverName)+'", "ip":"'+crypt(serverList[value.serverName].ip)+'", "port":"'+crypt(serverList[value.serverName].clientPort)+'" }';
+	var data = '{ "type":"redirect", "serverName":"'+CryptoHelper.crypt(value.serverName)+'", "ip":"'+CryptoHelper.crypt(serverList[value.serverName].ip)+'", "port":"'+CryptoHelper.crypt(serverList[value.serverName].clientPort)+'" }';
 	ws.send(data);
 }
 
@@ -315,7 +314,7 @@ function syncFifo() {
 }
 
 function syncText() {
-	var data = '{ "type":"syncText", "currentText":"'+crypt(sharedText)+'" }';
+	var data = '{ "type":"syncText", "currentText":"'+CryptoHelper.crypt(sharedText)+'" }';
 	broadcastToServers(data);
 }
 
@@ -334,23 +333,23 @@ function updateSharedText(ws) {
 	syncText();
 
 	//send updated text to other workspaces
-	var data = '{ "type":"updateSharedText", "newText":"'+ crypt(sharedText) +' "}';
+	var data = '{ "type":"updateSharedText", "newText":"'+ CryptoHelper.crypt(sharedText) +' "}';
 	broadcastToClientsExeptSender(ws, data);
 }
 
 function sendServerInfoToClients(serverName) {
-	var data = '{ "type":"newServer", "serverName":"'+crypt(serverName)+'", "ip":"'+crypt(serverList[serverName].ip)+'", "port":"'+crypt(serverList[serverName].clientPort)+'" }';
+	var data = '{ "type":"newServer", "serverName":"'+CryptoHelper.crypt(serverName)+'", "ip":"'+CryptoHelper.crypt(serverList[serverName].ip)+'", "port":"'+CryptoHelper.crypt(serverList[serverName].clientPort)+'" }';
 	broadcastToEveryClient(data);
 }
 
 function sendServerInfoToClient(ws, serverName) {
-	var data = '{ "type":"newServer", "serverName":"'+crypt(serverName)+'", "ip":"'+crypt(serverList[serverName].ip)+'", "port":"'+crypt(serverList[serverName].clientPort)+'" }';
+	var data = '{ "type":"newServer", "serverName":"'+CryptoHelper.crypt(serverName)+'", "ip":"'+CryptoHelper.crypt(serverList[serverName].ip)+'", "port":"'+CryptoHelper.crypt(serverList[serverName].clientPort)+'" }';
 	ws.send(data);
 }
 
 
 function sendServerRemoveToClients(serverName) {
-	var data = '{ "type":"serverRemove", "serverName":"'+crypt(serverName)+'" }';
+	var data = '{ "type":"serverRemove", "serverName":"'+CryptoHelper.crypt(serverName)+'" }';
 	broadcastToEveryClient(data);
 }
 
@@ -404,7 +403,7 @@ function updateQueuePosition(ws, leaverPositionInQueue) {
 		var workspacePositionInQueue = getPositionInQueue(client.id);
 		//Check if the workspace is in the queue and if his position changed
 		if (client !== ws && client.readyState === 1 && workspacePositionInQueue > 0 && leaverPositionInQueue <= workspacePositionInQueue && client.id != currentWriter) {  //dirty af, but idk what else to do
-	    	var data = '{ "type":"positionInQueue", "position":"'+ crypt((getPositionInQueue(client.id)).toString())+'" }';
+	    	var data = '{ "type":"positionInQueue", "position":"'+ CryptoHelper.crypt((getPositionInQueue(client.id)).toString())+'" }';
 			client.send(data);
 		}
 	});
@@ -416,7 +415,7 @@ function assignNextWriter(ws) {
 	if (typeof writingFifo[0] != 'undefined') {
 		currentWriter = writingFifo[0];
 		workspaces[currentWriter.toString()].send('{ "type":"hasRights" }');
-		var data = '{ "type":"newWriter", "nickname":"'+ crypt(workspaces[currentWriter.toString()].nickname) +' "}';
+		var data = '{ "type":"newWriter", "nickname":"'+ CryptoHelper.crypt(workspaces[currentWriter.toString()].nickname) +' "}';
 		broadcastToClientsExeptSender(workspaces[currentWriter.toString()], data);
 
 		shiftFifo(); //dequeue
@@ -424,20 +423,9 @@ function assignNextWriter(ws) {
 	}
 	else {
 		currentWriter = -1;
-		var data = '{ "type":"newWriter", "nickname":"' + crypt("") +'"}';
+		var data = '{ "type":"newWriter", "nickname":"' + CryptoHelper.crypt("") +'"}';
 		broadcastToEveryClient(data);
 	}
 
 	syncFifo();	
-}
-
-//Returns a crypted object
-function crypt(object) {
-	return CryptoJS.AES.encrypt(object, PrivateKey);
-}
-
-//Returns a decrypted object
-function decrypt(object) {
-	var bytes  = CryptoJS.AES.decrypt(object.toString(), PrivateKey);
-	return bytes.toString(CryptoJS.enc.Utf8);
 }
