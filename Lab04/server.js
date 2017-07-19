@@ -11,6 +11,7 @@ const WebSocket = require("ws");
 const Tcpp = require('tcp-ping');
 const _ = require('lodash');
 const CryptoHelper = require('./cryptoHelper.js');
+const ServerInfo = require('./serverInfo.js');
 
 const thisServerName = process.argv[2];
 
@@ -26,7 +27,7 @@ var writingFifo = [];
 var wsClient; //Client port listener
 var wsServer; //Server port listener
 
-initializeServerList();
+serverList = ServerInfo.initializeServerList();
 const clientPort = serverList[thisServerName].clientPort;
 const serverPort = serverList[thisServerName].serverPort;
 
@@ -256,13 +257,6 @@ function setClientListeners() {
 	  		ws.close();
 	  	} 	 
 	});
-}
-
-//Simply initialize the array with other servers info
-function initializeServerList() {
-	serverList["server1"] = {"serverName":"server1", "ip":"127.0.0.1", "clientPort":"8080", "serverPort":"8081"};
-	serverList["server2"] = {"serverName":"server2", "ip":"127.0.0.1", "clientPort":"8082", "serverPort":"8083"};
-	serverList["server3"] = {"serverName":"server3", "ip":"127.0.0.1", "clientPort":"8084", "serverPort":"8085"};
 }
 
 //Broadcasts a message to everyone in a group except the sender
