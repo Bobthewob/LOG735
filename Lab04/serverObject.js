@@ -157,6 +157,7 @@ function ServerObject(n) {
 					        }			    	
 				        	break;
 
+				        //Receives a writing request from a workspace
 					    case 'writingRequest':
 							writingRequest(ws.id);
 
@@ -172,6 +173,7 @@ function ServerObject(n) {
 							}
 					        break;
 
+					    //Receives a release request from a workspace
 					    case 'releaseRequest':
 					    	//If currentWriter, the client at position 0 in the fifo becomes the new writer
 					    	if (thisServer.currentWriter == ws.id) {
@@ -191,6 +193,7 @@ function ServerObject(n) {
 					    	updateSharedText(ws);
 					        break;
 
+					    //Receives updated shared texte
 					    case 'updateSharedText':
 					    	if (thisServer.currentWriter == ws.id) {
 					    		var newText = CryptoHelper.decrypt(object.sharedText);
@@ -228,27 +231,32 @@ function ServerObject(n) {
 		});
 	}
 
+	//Used to redirect a workspace when it connects to a server that is not the main
 	redirectClient = function(ws) {
 		var value = thisServer.serversConnectedTo[Object.keys(thisServer.serversConnectedTo)[0]];
 		var data = '{ "type":"redirect", "serverName":"'+CryptoHelper.crypt(value.serverName)+'", "ip":"'+CryptoHelper.crypt(thisServer.serverList[value.serverName].ip)+'", "port":"'+CryptoHelper.crypt(thisServer.serverList[value.serverName].clientPort)+'" }';
 		ws.send(data);
 	}
 
+	//Syncs the fifo with the other servers
 	syncFifo = function() {
 		var data = '{ "type":"syncFifo", "currentWriter":"'+thisServer.currentWriter+'", "currentFifo":"'+JSON.stringify(thisServer.writingFifo)+'" }';
 		broadcastToServers(data);
 	}
 
+	//Syncs the text with the other servers
 	syncText = function() {
 		var data = '{ "type":"syncText", "currentText":"'+CryptoHelper.crypt(thisServer.sharedText)+'" }';
 		broadcastToServers(data);
 	}
 
+	//Syncs the currentId with the other servers
 	syncCurrentId = function() {
 		var data = '{ "type":"syncCurrentId", "currentId":"'+thisServer.currentId+'" }';
 		broadcastToServers(data);
 	}
 
+	//Sends the updated text to workspaces
 	updateSharedText = function(ws) {
 		syncText();
 
@@ -257,21 +265,24 @@ function ServerObject(n) {
 		broadcastToClientsExeptSender(ws, data);
 	}
 
+	//Sends server info to workspaces
 	sendServerInfoToClients = function(serverName) {
 		var data = '{ "type":"newServer", "serverName":"'+CryptoHelper.crypt(serverName)+'", "ip":"'+CryptoHelper.crypt(thisServer.serverList[serverName].ip)+'", "port":"'+CryptoHelper.crypt(thisServer.serverList[serverName].clientPort)+'" }';
 		broadcastToEveryClient(data);
 	}
 
+	//Sends server into to a specific workspace
 	sendServerInfoToClient = function(ws, serverName) {
 		var data = '{ "type":"newServer", "serverName":"'+CryptoHelper.crypt(serverName)+'", "ip":"'+CryptoHelper.crypt(thisServer.serverList[serverName].ip)+'", "port":"'+CryptoHelper.crypt(thisServer.serverList[serverName].clientPort)+'" }';
 		ws.send(data);
 	}
 
-
+	//Informs workspace when a server is removed
 	sendServerRemoveToClients = function(serverName) {
 		var data = '{ "type":"serverRemove", "serverName":"'+CryptoHelper.crypt(serverName)+'" }';
 		broadcastToEveryClient(data);
 	}
+
 	//Server port listener
 	setServerListeners = function() {
 		thisServer.wsServer.on('connection', function connection(ws) {
@@ -324,14 +335,16 @@ function ServerObject(n) {
 		});
 	}
 
+	//Broadcasts a message to every server, used to sync servers
 	broadcastToServers = function(data) {
 		//Broadcast to other servers
 		thisServer.wsServer.clients.forEach(function each(client) {
 			if (client.readyState === 1) {
 		    	client.send(data, function ack(error) {
+		    		//If an error occurs with a server during the sync, close the connection
 					if (typeof error != 'undefined') {
-						console.log("erreur dans la synchro");
-						//todo je sais pas comment faire l'erreur
+						console.log("Erreur de synchro avec "+client.serverName);
+						client.close();
 					}
 					else {
 						console.log("Synchro avec "+client.serverName+" réussie");

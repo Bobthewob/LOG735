@@ -163,12 +163,14 @@ function connectToServer(ipAddress, port, firstConnection) {
 			connectToServer(value.ip, value.port, false);				
 		}
 		else {
+		  	$("#msgLoginCatastrophe").css("display", "").delay(5000).fadeOut(400);
+		  	clearInterval(periodicCall);
 			console.log("catastrophe");
 		}
 	};
 }
 
-
+//Adds a new server to his list of known nodes
 function addNewServer(serverName, ip, port) {
 	otherServers[serverName] = { "ip":ip, "port":port };
 }
