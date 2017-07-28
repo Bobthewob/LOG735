@@ -128,17 +128,11 @@ function ServerObject(n) {
 						  	syncCurrentId();
 
 							thisServer.workspaces[ws.id.toString()].nickname = CryptoHelper.decrypt(object.nickname); //Saves nickname
-					        var data = '{ "type":"newUser", "nickname":"'+ object.nickname +' "}';
 
 					        //only if it's a new workspace
 					        if (workspaceId == -1) {
+					        	var data = '{ "type":"newUser", "nickname":"'+ object.nickname +' "}';
 					        	broadcastToClientsExeptSender(ws, data);
-
-					        	//If a workspace connects and there's a current writer
-							  	if (thisServer.currentWriter != -1 && typeof thisServer.workspaces[thisServer.currentWriter.toString()] != 'undefined') {
-									var data = '{ "type":"newWriter", "nickname":"'+ CryptoHelper.crypt(thisServer.workspaces[thisServer.currentWriter.toString()].nickname) +' "}';
-									ws.send(data);
-							  	}
 
 							  	//If a workspace joins and the text is not empty
 							  	if (thisServer.sharedText != '') {
@@ -153,7 +147,13 @@ function ServerObject(n) {
 									    sendServerInfoToClient(ws, value.serverName);
 									});	
 							  	}
-					        }			    	
+					        }
+
+					        //If a workspace connects and there's a current writer
+						  	if (thisServer.currentWriter != -1 && typeof thisServer.workspaces[thisServer.currentWriter.toString()] != 'undefined') {
+								var data = '{ "type":"newWriter", "nickname":"'+ CryptoHelper.crypt(thisServer.workspaces[thisServer.currentWriter.toString()].nickname) +' "}';
+								ws.send(data);
+						  	}			    	
 				        	break;
 
 				        //Receives a writing request from a workspace
@@ -178,7 +178,6 @@ function ServerObject(n) {
 					    	if (thisServer.currentWriter == ws.id) {
 					    		var newText = CryptoHelper.decrypt(object.sharedText);
 					    		thisServer.sharedText = newText; //Update the new text
-
 					    		assignNextWriter(ws);		    		
 					    	}
 					    	//Workspace just wants to leave the queue
@@ -357,7 +356,7 @@ function ServerObject(n) {
 	//Manage insertion into Fifo and sets currentWriter if empty
 	writingRequest = function(workspaceId) {
 		//Make sure the workspace is not already in the FIFO
-		if (checkIfInQueue(workspaceId) == -1) {
+		if (checkIfInQueue(workspaceId) == -1 && workspaceId != thisServer.currentWriter) {
 			//Check is FIFO is empty, if so sets current writer
 			if (thisServer.writingFifo.length == 0 && thisServer.currentWriter == -1) {
 				thisServer.currentWriter = workspaceId;

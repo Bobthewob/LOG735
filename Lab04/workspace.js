@@ -11,6 +11,7 @@ var id = -1;
 var thisNickname;
 var periodicCall;
 var otherServers = {};
+var lastAction = "";
 var hadError = false;
 
 //Login button click method. Sets nickname and calls connectToServer with input values
@@ -39,6 +40,7 @@ function connectToServer(ipAddress, port, firstConnection) {
     		//Requests access to write
 			$("#btnRequestRight").click(function() {
 				ws.send('{ "type":"writingRequest" }');
+				lastAction = '{ "type":"writingRequest" }';
 
 				//Update controls
 			    $("#btnRequestRight").prop('disabled',true);
@@ -48,6 +50,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 			//Release writing rights
 			$( "#btnReleaseRight").click(function() {
 				ws.send('{ "type":"releaseRequest", "sharedText":"'+ CryptoHelper.crypt($("#sharedText").val()) +'" }');
+				lastAction = '{ "type":"releaseRequest", "sharedText":"'+ CryptoHelper.crypt($("#sharedText").val()) +'" }';
 
 				//Update controls
 			    $("#btnReleaseRight").prop('disabled',true);
@@ -58,6 +61,19 @@ function connectToServer(ipAddress, port, firstConnection) {
 			});
 		}
 		ws.send('{ "type":"connectionRequest", "id":"'+CryptoHelper.crypt(id.toString())+'", "nickname":"'+ CryptoHelper.crypt(thisNickname)+'" }');
+
+		if (lastAction != "") {
+			var tmp = JSON.parse(lastAction);
+
+			if (tmp.type == "releaseRequest") {
+		 		$("#msgLoginOupelaye").css("display", "").delay(5000).fadeOut(400);
+			    $("#btnReleaseRight").prop('disabled',false);
+			    $("#btnRequestRight").prop('disabled',true);	
+			}
+			else {
+				ws.send(lastAction);				
+			}
+		}
 	};
 
 	ws.onmessage = function(event) { 
@@ -82,6 +98,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 			//Triggered when the workspace obtains writing rights
 			case "hasRights":
+				lastAction = "";
 			    updateCurrentWriter(thisNickname);
 			    logInfo("You now have writing rights!");
 
@@ -96,6 +113,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 			//Notices the workspace when their position in queue changed
 	     	case "positionInQueue":
+	     		lastAction = "";
 	        	position = CryptoHelper.decrypt(message.position);
 	        	logInfo("You are now position "+ position + " in queue!");
 
@@ -107,17 +125,22 @@ function connectToServer(ipAddress, port, firstConnection) {
 			    nickname = CryptoHelper.decrypt(message.nickname);
 
 			    if (nickname == '') {
+			    	lastAction = "";
 					logInfo("The queue is now empty.");
 			    }
 			    else {
-			    	logInfo(nickname + " now has writing rights!");
+			    	if ($("#lblCurrentWriter").text().replace(/\s/g,'').split(":")[1] != nickname) {
+			    		logInfo(nickname + " now has writing rights!");			    		
+			    	}
 			    }
 
 			   	updateCurrentWriter(nickname);
+
 			    break;
 
 			//Notices the workspace that they successfully left the queue
 		    case "leftQueue":
+		    	lastAction = "";
 		    	logInfo("You have left the queue.")
 		    	break;
 
