@@ -32,9 +32,7 @@ function ServerObject(n) {
 
 	thisServer.connectToExistingServers = function () {
 		var finished = _.after(Object.keys(thisServer.serverList).length - 1, startServer);
-		//var serverList = this.serverList;
-		//var patate = this.serversConnectedTo;
-		console.log(thisServer.serversConnectedTo);
+
 		Object.keys(thisServer.serverList).map(function(objectKey, index) {
 		    var value = thisServer.serverList[objectKey];
 		    if (thisServer.serverName !== value.serverName) {
@@ -50,6 +48,7 @@ function ServerObject(n) {
 		});	
 	}
 
+	//Checks if this node is now the main node
 	setMain = function() {
 		if (Object.keys(thisServer.serversConnectedTo).length == 0) {
 			thisServer.isMain = true;
@@ -107,7 +106,7 @@ function ServerObject(n) {
 		};
 	}
 
-		//Sets all the client listeners
+	//Sets all the client listeners
 	setClientListeners = function() {
 		//Called when a workspace connects to the server
 		thisServer.wsClient.on('connection', function (ws) {
@@ -158,7 +157,7 @@ function ServerObject(n) {
 				        	break;
 
 				        //Receives a writing request from a workspace
-					    case 'writingRequest':
+					    case 'writingRequest':	
 							writingRequest(ws.id);
 
 							if (thisServer.currentWriter == ws.id) {

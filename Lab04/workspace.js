@@ -11,6 +11,7 @@ var id = -1;
 var thisNickname;
 var periodicCall;
 var otherServers = {};
+var hadError = false;
 
 //Login button click method. Sets nickname and calls connectToServer with input values
 $( "#btnLogin" ).click(function() {
@@ -56,7 +57,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 			    clearInterval(periodicCall); //stop periodically calling server to save text
 			});
 		}
-		ws.send('{ "type":"connectionRequest", "id":"'+CryptoHelper.crypt(id.toString())+'", "nickname":"'+ CryptoHelper.crypt(thisNickname)+'" }')
+		ws.send('{ "type":"connectionRequest", "id":"'+CryptoHelper.crypt(id.toString())+'", "nickname":"'+ CryptoHelper.crypt(thisNickname)+'" }');
 	};
 
 	ws.onmessage = function(event) { 
@@ -125,6 +126,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 		    	$("#sharedText").val(CryptoHelper.decrypt(message.newText));
 		    	break;
 
+		    //When a new node is available
 		    case "newServer":
 		    	var serverName = CryptoHelper.decrypt(message.serverName);
 	    		var ip = CryptoHelper.decrypt(message.ip);
@@ -133,11 +135,13 @@ function connectToServer(ipAddress, port, firstConnection) {
 		    	console.log(otherServers);
 		    	break;
 
+		    //When a available node is removed
 		    case "serverRemove":
 		    	delete otherServers[CryptoHelper.decrypt(message.serverName)];
 		    	console.log(otherServers);
 		    	break;
 
+		    //When the workspace is told to connect to a new server
 	    	case "redirect":
 	    		var serverName = CryptoHelper.decrypt(message.serverName);
 	    		var ip = CryptoHelper.decrypt(message.ip);
@@ -151,10 +155,11 @@ function connectToServer(ipAddress, port, firstConnection) {
 	ws.onerror = function(event){
 		if (firstConnection) {
 		  $("#msgLoginFailure").css("display", "").delay(5000).fadeOut(400);
+		  hadError = true;
 		}
 	};
 
-	//Triggered when the server is closed
+	//Triggered when the connection is closed
 	ws.onclose = function (event) {
 		console.log("serveur fermé");
 		if (Object.keys(otherServers).length != 0) {
@@ -162,7 +167,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 		    delete otherServers[Object.keys(otherServers)[0]];	  
 			connectToServer(value.ip, value.port, false);				
 		}
-		else {
+		else if(!hadError) {
 		  	$("#msgLoginCatastrophe").css("display", "").delay(5000).fadeOut(400);
 		  	clearInterval(periodicCall);
 			console.log("catastrophe");
