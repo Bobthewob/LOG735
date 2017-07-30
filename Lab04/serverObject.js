@@ -112,6 +112,14 @@ function ServerObject(n) {
 		thisServer.wsClient.on('connection', function (ws) {
 		  	if (thisServer.isMain) {
 		  		console.log("Browser connected online...");
+
+		  		ws.isAlive = true;
+
+		  		//When the workspace answers to a ping, set the flag to true
+ 				ws.on('pong', function() {
+				  ws.isAlive = true;
+				});	
+
 		  		//When a workspace sends a message to the server
 			  	ws.on("message", function (str) {
 				    var object = JSON.parse(str);
@@ -153,11 +161,11 @@ function ServerObject(n) {
 						  	if (thisServer.currentWriter != -1 && typeof thisServer.workspaces[thisServer.currentWriter.toString()] != 'undefined') {
 								var data = '{ "type":"newWriter", "nickname":"'+ CryptoHelper.crypt(thisServer.workspaces[thisServer.currentWriter.toString()].nickname) +' "}';
 								ws.send(data);
-						  	}			    	
+						  	}						  			    	
 				        	break;
 
 				        //Receives a writing request from a workspace
-					    case 'writingRequest':	
+					    case 'writingRequest':						    	
 							writingRequest(ws.id);
 
 							if (thisServer.currentWriter == ws.id) {
@@ -429,6 +437,17 @@ function ServerObject(n) {
 
 		syncFifo();	
 	}
+
+	//Sets a periodic ping towards every workspace to make sure they are still responding, function was taken from ws documentation
+	const interval = setInterval(function ping() {
+	  thisServer.wsClient.clients.forEach(function each(ws) {
+	    if (ws.isAlive === false) return ws.close();
+
+	    ws.isAlive = false;
+	    ws.ping('', false, true);
+
+	  });
+	}, 30000);
 
 }
 
