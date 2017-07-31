@@ -30,6 +30,7 @@ function ServerObject(n) {
 	thisServer.clientPort = thisServer.serverList[thisServer.serverName].clientPort;
 	thisServer.serverPort = thisServer.serverList[thisServer.serverName].serverPort;
 
+	//Function called when a server is started. It tries to ping other known ressources to see if they are online. If so, it connects to them.
 	thisServer.connectToExistingServers = function () {
 		var finished = _.after(Object.keys(thisServer.serverList).length - 1, startServer);
 
@@ -80,6 +81,7 @@ function ServerObject(n) {
 			var message = JSON.parse(event.data);
 
 			switch(message.type) {
+				//Tells the server to update his fifo and the current writer
 				case "syncFifo":
 			    	thisServer.currentWriter = message.currentWriter;
 			    	thisServer.writingFifo = JSON.parse(message.currentFifo);
@@ -87,10 +89,12 @@ function ServerObject(n) {
 			    	console.log(thisServer.writingFifo);
 			    break;
 
+			    //Tells the server to update his text
 			    case "syncText":
 			    	thisServer.sharedText = CryptoHelper.decrypt(message.currentText);
 			    break;
 
+			    //Tells the server to update his currentId
 			    case "syncCurrentId":
 			    	thisServer.currentId = message.currentId;
 			    break;
@@ -165,8 +169,8 @@ function ServerObject(n) {
 				        	break;
 
 				        //Receives a writing request from a workspace
-					    case 'writingRequest':						    	
-							writingRequest(ws.id);
+					    case 'writingRequest':	
+							writingRequest(ws.id);	
 
 							if (thisServer.currentWriter == ws.id) {
 								ws.send('{ "type":"hasRights" }');  //informs the workspace it has writing rights

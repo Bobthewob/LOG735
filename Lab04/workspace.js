@@ -33,6 +33,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 	ws = new WebSocket("ws://"+ipAddress+":"+port);
 
 	ws.onopen = function (event) {
+		//If it's the first connection, so when the user clicks login
 		if (firstConnection) {
 		 	$("#msgLoginSuccess").css("display", "").delay(5000).fadeOut(400);
     		$("#btnLogin").prop("disabled", true);
@@ -60,8 +61,10 @@ function connectToServer(ipAddress, port, firstConnection) {
 			    clearInterval(periodicCall); //stop periodically calling server to save text
 			});
 		}
+
 		ws.send('{ "type":"connectionRequest", "id":"'+CryptoHelper.crypt(id.toString())+'", "nickname":"'+ CryptoHelper.crypt(thisNickname)+'" }');
 
+		//If the workspace reconnects and it's last action was not handled properly, send it again upon reconnection
 		if (lastAction != "") {
 			var tmp = JSON.parse(lastAction);
 
@@ -80,6 +83,7 @@ function connectToServer(ipAddress, port, firstConnection) {
 		var message = JSON.parse(event.data);
 
 		switch(message.type) {
+			//Sets the workspace's id
 			case "idRequest":
 		    	id = CryptoHelper.decrypt(message.id);
 		    break;
@@ -122,16 +126,14 @@ function connectToServer(ipAddress, port, firstConnection) {
 
 	        //Notices the workspaces when there's a new writer
 			case "newWriter":
+				lastAction = "";
 			    nickname = CryptoHelper.decrypt(message.nickname);
 
 			    if (nickname == '') {
-			    	lastAction = "";
 					logInfo("The queue is now empty.");
 			    }
-			    else {
-			    	if ($("#lblCurrentWriter").text().replace(/\s/g,'').split(":")[1] != nickname) {
-			    		logInfo(nickname + " now has writing rights!");			    		
-			    	}
+			    else if (($("#lblCurrentWriter").text().replace(/\s/g,'').split(":")[1] != nickname && nickname != thisNickname) ){
+		    		logInfo(nickname + " now has writing rights!");			    		
 			    }
 
 			   	updateCurrentWriter(nickname);
@@ -195,6 +197,8 @@ function connectToServer(ipAddress, port, firstConnection) {
 		  	clearInterval(periodicCall);
 			console.log("catastrophe");
 		}
+
+		hadError = false;
 	};
 }
 
